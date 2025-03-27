@@ -32,6 +32,23 @@
       >
         <el-icon class="hint-icon"><QuestionFilled /></el-icon>
       </el-tooltip>
+
+      <el-select
+        ref="startPoint"
+        v-model="selectedRoads"
+        placeholder="请选择路线"
+        multiple
+        filterable
+        :multiple-limit="2"
+        class="form-input"
+      >
+        <el-option
+          v-for="item in roadOptions"
+          :key="item.name"
+          :label="item.name"
+          :value="item.name">
+        </el-option>
+      </el-select>
     </div>
 
     <!-- 文件列表 -->
@@ -76,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Upload, QuestionFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import service from '../../api/request'
@@ -87,7 +104,8 @@ const selectedFiles = ref([])
 const isCalculating = ref(false)
 const isUploading = ref(false)
 const progress = ref(0)
-
+const selectedRoads = ref([])
+const roadOptions = ref([])
 const checkAll = computed({
   get() {
     return selectedFiles.value.length === files.value.length
@@ -100,6 +118,20 @@ const checkAll = computed({
 const isIndeterminate = computed(() => {
   return selectedFiles.value.length > 0 &&
     selectedFiles.value.length < files.value.length
+})
+
+// 获取路线列表
+const fetchRoadOptions = async () => {
+  try {
+    const res = await service.get('/api/road/list')
+    roadOptions.value = res.data
+  } catch (error) {
+    ElMessage.error('获取路线列表失败')
+  }
+}
+
+onMounted(() => {
+  fetchRoadOptions()
 })
 
 const handleFileUpload = async (e) => {
@@ -147,7 +179,8 @@ const handleCalculate = async () => {
 
   try {
     const res = await service.post('/api/calculate', {
-      files: selectedFiles.value
+      files: selectedFiles.value,
+      roads: selectedRoads.value
     }, {
       responseType: 'blob'
     })
