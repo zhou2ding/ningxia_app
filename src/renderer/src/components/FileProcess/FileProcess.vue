@@ -9,28 +9,28 @@
     <!-- 上传区域 -->
     <div class="upload-section">
       <el-button
-          type="primary"
-          icon="el-icon-upload"
-          :disabled="isUploading"
-          :loading="isUploading"
-          @click="$refs.fileInput.click()"
+        type="primary"
+        :icon="Upload"
+        :disabled="isUploading"
+        :loading="isUploading"
+        @click="$refs.fileInput.click()"
       >
         {{ isUploading ? '上传中 ...' : '上传zip文件' }}
       </el-button>
       <input
-          type="file"
-          ref="fileInput"
-          accept=".zip"
-          @change="handleFileUpload"
-          hidden
+        type="file"
+        ref="fileInput"
+        accept=".zip"
+        @change="handleFileUpload"
+        hidden
       />
 
       <el-tooltip
-          content="仅支持.zip格式文件"
-          placement="right"
-          effect="light"
+        content="仅支持.zip格式文件"
+        placement="right"
+        effect="light"
       >
-        <i class="el-icon-question hint-icon"></i>
+        <el-icon class="hint-icon"><QuestionFilled /></el-icon>
       </el-tooltip>
     </div>
 
@@ -38,9 +38,9 @@
     <div class="file-list">
       <div v-if="files.length" class="check-all">
         <el-checkbox
-            :indeterminate="isIndeterminate"
-            v-model="checkAll"
-            @change="handleCheckAll"
+          :indeterminate="isIndeterminate"
+          v-model="checkAll"
+          @change="handleCheckAll"
         >
           全选
         </el-checkbox>
@@ -55,10 +55,10 @@
 
     <!-- 计算按钮 -->
     <el-button
-        type="success"
-        :disabled="!selectedFiles.length || isCalculating"
-        :loading="isCalculating"
-        @click="handleCalculate"
+      type="success"
+      :disabled="!selectedFiles.length || isCalculating"
+      :loading="isCalculating"
+      @click="handleCalculate"
     >
       {{ isCalculating ? '计算中 ...' : '开始计算' }}
     </el-button>
@@ -66,123 +66,121 @@
     <!-- 进度条遮罩 -->
     <div v-if="isUploading || isCalculating" class="progress-mask">
       <el-progress
-          type="circle"
-          :percentage="progress"
-          :width="80"
-          color="#5fbfff"
+        type="circle"
+        :percentage="progress"
+        :width="80"
+        color="#5fbfff"
       />
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: "FileProcess",
-  data() {
-    return {
-      files: [],
-      selectedFiles: [],
-      isCalculating: false,
-      isUploading: false,
-      progress: 0
-    }
+<script setup>
+import { ref, computed } from 'vue'
+import { Upload, QuestionFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import axios from "axios"
+import service from '../../api/request'
+
+
+const fileInput = ref(null)
+const files = ref([])
+const selectedFiles = ref([])
+const isCalculating = ref(false)
+const isUploading = ref(false)
+const progress = ref(0)
+
+const checkAll = computed({
+  get() {
+    return selectedFiles.value.length === files.value.length
   },
-  mounted() {
-    this.$forceUpdate();
-  },
-  computed: {
-    checkAll: {
-      get() {
-        return this.selectedFiles.length === this.files.length
-      },
-      set(value) {
-        this.selectedFiles = value ? this.files.slice() : []
-      }
-    },
-    isIndeterminate() {
-      return this.selectedFiles.length > 0 &&
-          this.selectedFiles.length < this.files.length
-    }
-  },
-  methods: {
-    async handleFileUpload(e) {
-      const file = e.target.files[0]
-      if (!file) return
-
-      const formData = new FormData()
-      formData.append('file', file)
-
-      this.isUploading = true
-      this.progress = 0
-
-      const timer = setInterval(() => {
-        if (this.progress < 90) {
-          const increment = Math.floor(Math.random() * 10 + 5);
-          this.progress = Math.min(this.progress + increment, 99);
-        }
-      }, 300);
-
-      try {
-        const res = await this.$axios.post('/api/unzip', formData)
-        this.files = res.data.files
-
-        this.progress = 100;
-        await new Promise(resolve => setTimeout(resolve, 300));
-      } catch (error) {
-        this.$message.error('文件解压失败，请检查文件格式')
-      } finally {
-        clearInterval(timer);
-        this.isUploading = false
-        e.target.value = null
-      }
-    },
-
-    async handleCalculate() {
-      this.isCalculating = true
-      this.progress = 0
-
-      const timer = setInterval(() => {
-        if (this.progress < 90) {
-          const increment = Math.floor(Math.random() * 10 + 5);
-          this.progress = Math.min(this.progress + increment, 99);
-        }
-      }, 300);
-
-      try {
-        const res = await this.$axios.post('/api/calculate', {
-          files: this.selectedFiles
-        }, {
-          responseType: 'blob'
-        })
-
-        this.progress = 100;
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // 下载Word文件
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(
-            new Blob([res.data], {type: 'application/msword'})
-        )
-        link.download = 'result.docx'
-        link.click()
-
-        this.$message.success('文件生成成功')
-      } catch (error) {
-        this.$message.error('计算过程发生错误')
-      } finally {
-        clearInterval(timer);
-        this.isCalculating = false
-      }
-    },
-    getFileName(path) {
-      // 使用正则表达式处理Windows和Linux路径分隔符
-      return path.split(/[\\/]/).pop();
-    },
-
-    handleCheckAll(value) {
-      this.selectedFiles = value ? this.files.slice() : []
-    }
+  set(value) {
+    selectedFiles.value = value ? [...files.value] : []
   }
+})
+
+const isIndeterminate = computed(() => {
+  return selectedFiles.value.length > 0 &&
+    selectedFiles.value.length < files.value.length
+})
+
+const handleFileUpload = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  isUploading.value = true
+  progress.value = 0
+
+  const timer = setInterval(() => {
+    if (progress.value < 90) {
+      const increment = Math.floor(Math.random() * 10 + 5)
+      progress.value = Math.min(progress.value + increment, 99)
+    }
+  }, 300)
+
+  try {
+    const res = await service.post('/api/unzip', formData)
+    files.value = res.data.files
+
+    progress.value = 100
+    await new Promise(resolve => setTimeout(resolve, 300))
+  } catch (error) {
+    ElMessage.error('文件解压失败，请检查文件格式')
+  } finally {
+    clearInterval(timer)
+    isUploading.value = false
+    e.target.value = null
+  }
+}
+
+const handleCalculate = async () => {
+  isCalculating.value = true
+  progress.value = 0
+
+  const timer = setInterval(() => {
+    if (progress.value < 90) {
+      const increment = Math.floor(Math.random() * 10 + 5)
+      progress.value = Math.min(progress.value + increment, 99)
+    }
+  }, 300)
+
+  try {
+    const res = await service.post('/api/calculate', {
+      files: selectedFiles.value
+    }, {
+      responseType: 'blob'
+    })
+
+    progress.value = 100
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    // 下载Word文件
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(
+      new Blob([res.data], {type: 'application/msword'})
+    )
+    link.download = 'result.docx'
+    link.click()
+
+    ElMessage.success('文件生成成功')
+  } catch (error) {
+    ElMessage.error('计算过程发生错误')
+  } finally {
+    clearInterval(timer)
+    isCalculating.value = false
+  }
+}
+
+const getFileName = (path) => {
+  // 使用正则表达式处理Windows和Linux路径分隔符
+  return path.split(/[\\/]/).pop()
+}
+
+const handleCheckAll = (value) => {
+  selectedFiles.value = value ? [...files.value] : []
 }
 </script>
 
