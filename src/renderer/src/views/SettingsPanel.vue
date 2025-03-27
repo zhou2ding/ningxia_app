@@ -372,7 +372,7 @@ export default {
 
 <style scoped>
 .settings-panel {
-  margin: 20px auto 0;
+  margin: 100px auto 0;
   width: 700px;
   position: relative;
   padding: 1px;

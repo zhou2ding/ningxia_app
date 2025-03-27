@@ -13,5 +13,13 @@ export default [
       'vue/multi-word-component-names': 'off'
     }
   },
+  {
+    // 添加全局变量声明
+    languageOptions: {
+      globals: {
+        BMapGL: 'readonly'
+      }
+    }
+  },
   eslintConfigPrettier
 ]

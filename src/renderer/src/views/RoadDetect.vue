@@ -24,16 +24,17 @@
 
 <script>
 import AppHeader from '../components/AppHeader/AppHeader.vue'
-import FileProcess from "../components/FileProcess/FileProcess.vue"
+import FileProcess from '../components/FileProcess/FileProcess.vue'
 import RoadMap from '../components/RoadMap/RoadMap.vue'
-import RoadRank from "../components/RoadRank/RoadRank.vue"
+import RoadRank from '../components/RoadRank/RoadRank.vue'
+
 
 export default {
   components: {
     AppHeader,
     FileProcess,
     RoadMap,
-    RoadRank,
+    RoadRank
   }
 }
 

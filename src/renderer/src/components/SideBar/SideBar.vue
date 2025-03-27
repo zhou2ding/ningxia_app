@@ -5,35 +5,33 @@
         <span>路况数据</span>
         <span class="arrow" :class="{ 'arrow-down': isExpanded }"></span>
       </div>
-      <div class="submenu" v-if="isExpanded">
-        <router-link to="/roadDetect" class="sidebar-link" active-class="active-link">计算数据</router-link>
-        <router-link to="/setting" class="sidebar-link" active-class="active-link">指标配置</router-link>
+      <div v-if="isExpanded" class="submenu">
+        <router-link to="/roadDetect" class="sidebar-link" active-class="active-link">
+          计算数据
+        </router-link>
+        <router-link to="/setting" class="sidebar-link" active-class="active-link">
+          指标配置
+        </router-link>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: "SideBar",
-  data() {
-    return {
-      isExpanded: true
-    };
-  },
-  methods: {
-    toggleMenu() {
-      this.isExpanded = !this.isExpanded;
-    }
-  }
-};
+<script setup>
+import { ref } from 'vue'
+
+const isExpanded = ref(true)
+
+const toggleMenu = () => {
+  isExpanded.value = !isExpanded.value
+}
 </script>
 
 <style lang="scss" scoped>
 @import '../../styles/variables/variables.module';
 
 .sidebar {
-  z-index: $base-z-index+1;
+  z-index: calc($base-z-index + 1);
   overflow: hidden;
   width: $base-left-menu-width;
   position: fixed;
@@ -56,7 +54,7 @@ export default {
   &:hover,
   &.active-link {
     color: #fff;
-    background-color: #546D8D;
+    background-color: #546d8d;
   }
 }
 

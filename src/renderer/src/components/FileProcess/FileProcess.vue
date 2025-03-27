@@ -79,9 +79,7 @@
 import { ref, computed } from 'vue'
 import { Upload, QuestionFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import axios from "axios"
 import service from '../../api/request'
-
 
 const fileInput = ref(null)
 const files = ref([])

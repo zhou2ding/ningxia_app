@@ -4,13 +4,9 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AppHeader',
-};
-</script>
+<script setup></script>
 
-<style>
+<style scoped>
 .header {
   width: 100%;
   height: 100px;

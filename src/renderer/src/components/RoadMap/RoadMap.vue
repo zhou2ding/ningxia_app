@@ -3,45 +3,45 @@
     <div class="content-wrapper">
       <h2 class="map-form-title">地图搜索</h2>
       <!-- 百度地图 -->
-      <div id="map1" style="width: 100%; height: 280px; margin-top: 20px;"></div>
+      <div id="map1" style="width: 100%; height: 280px; margin-top: 20px"></div>
     </div>
     <i></i>
     <i></i>
   </div>
 </template>
 
-<script>
-/* global BMapGL */
-export default {
-  name: "RoadMap",
-  mounted() {
-    this.checkBaiduMapReady();
-  },
-  methods: {
-    checkBaiduMapReady() {
-      if (window.BMapGL) {
-        this.initMap();
-      } else {
-        setTimeout(() => {
-          this.checkBaiduMapReady();
-        }, 200);
-      }
-    },
-    initMap() {
-      // 初始化百度地图
-      this.map = new BMapGL.Map("map1");
-      const centerPoint = new BMapGL.Point(106.2046, 37.9937);
-      this.map.centerAndZoom(centerPoint, 8);
-      this.map.enableScrollWheelZoom(true);
-      // 添加比例尺控件
-      const scaleControl = new BMapGL.ScaleControl();
-      this.map.addControl(scaleControl);
-      // 添加导航控件
-      const navControl = new BMapGL.NavigationControl();
-      this.map.addControl(navControl);
-    }
+<script setup>
+import { onMounted } from 'vue'
+
+let map = null
+
+onMounted(() => {
+  checkBaiduMapReady()
+})
+
+const checkBaiduMapReady = () => {
+  if (window.BMapGL) {
+    initMap()
+  } else {
+    setTimeout(() => {
+      checkBaiduMapReady()
+    }, 200)
   }
-};
+}
+
+const initMap = () => {
+  // 初始化百度地图
+  map = new BMapGL.Map('map1')
+  const centerPoint = new BMapGL.Point(106.2046, 37.9937)
+  map.centerAndZoom(centerPoint, 8)
+  map.enableScrollWheelZoom(true)
+  // 添加比例尺控件
+  const scaleControl = new BMapGL.ScaleControl()
+  map.addControl(scaleControl)
+  // 添加导航控件
+  const navControl = new BMapGL.NavigationControl()
+  map.addControl(navControl)
+}
 </script>
 
 <style lang="scss" scoped>
@@ -58,7 +58,7 @@ export default {
 
   &::before,
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     width: 100%;
     height: 2px;

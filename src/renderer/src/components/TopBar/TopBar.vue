@@ -2,25 +2,19 @@
   <div class="topBar">
     <div class="topBar-left">公路路况检测设备数据应用系统</div>
     <div class="topBar-right">
-      <span class="user-info">
-        <i class="icon-user"></i> 用户
-      </span>
+      <span class="user-info"><i class="icon-user"></i>用户</span>
       <button class="logout-button">退出</button>
     </div>
   </div>
 </template>
 
-<script>
-export default {
-  name: 'TopBar',
-}
-</script>
+<script setup></script>
 
 <style lang="scss" scoped>
 @import '../../styles/variables/variables.module';
 
 .topBar {
-  z-index: $base-z-index+2;
+  z-index: calc($base-z-index + 2);
   position: fixed;
   top: 0;
   left: 0;
