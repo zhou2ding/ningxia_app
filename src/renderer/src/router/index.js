@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import RoadDetect from '../views/RoadDetect.vue'
-import SettingsPanel from '..//views/SettingsPanel.vue'
+import SettingsPanel from '../views/SettingsPanel.vue'
+import Statistics from '../views/Statistics.vue'
 
 const routes = [
   {
@@ -16,6 +17,11 @@ const routes = [
     path: '/setting',
     name: 'setting',
     component: SettingsPanel
+  },
+  {
+    path: '/statistics',
+    name: 'statistics',
+    component: Statistics
   }
 ]
 

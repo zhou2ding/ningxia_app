@@ -12,6 +12,9 @@
         <router-link to="/setting" class="sidebar-link" active-class="active-link">
           指标配置
         </router-link>
+        <router-link to="/statistics" class="sidebar-link" active-class="active-link">
+          统计功能
+        </router-link>
       </div>
     </div>
   </div>

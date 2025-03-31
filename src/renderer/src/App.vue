@@ -3,7 +3,7 @@
     <TopBar />
     <SideBar />
     <div class="main-content">
-      <router-view :key="Math.random()"/>
+      <router-view :key="Math.random()" />
     </div>
   </div>
 </template>
@@ -15,9 +15,9 @@ import SideBar from './components/SideBar/SideBar.vue'
 export default {
   components: {
     TopBar,
-    SideBar,
-  },
-};
+    SideBar
+  }
+}
 </script>
 
 <style scoped>
