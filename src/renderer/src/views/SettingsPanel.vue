@@ -81,7 +81,7 @@
                 />
                 %
               </el-form-item>
-              <el-form-item label="路面技术状况(POI)优等路率 ≥">
+              <el-form-item label="路面技术状况(PQI)优等路率 ≥">
                 <el-input-number
                   v-model="nationalData.poiExcellent"
                   :min="0"
@@ -136,7 +136,7 @@
                   />
                 </div>
               </el-form-item>
-              <el-form-item label="POI 优良路率 ≥">
+              <el-form-item label="PQI 优良路率 ≥">
                 <div class="region-inputs">
                   <span>东</span>
                   <el-input-number
@@ -189,7 +189,7 @@
                   />
                 </div>
               </el-form-item>
-              <el-form-item label="POI 优良路率 ≥">
+              <el-form-item label="PQI 优良路率 ≥">
                 <div class="region-inputs">
                   <span>东</span>
                   <el-input-number
@@ -352,7 +352,17 @@ export default {
         })
         this.$message.success('省厅指标保存成功')
       } catch (error) {
-        this.$message.error('保存失败')
+        let errorMessage = '未知错误'
+        if (error.response) {
+          if (error.response.data.error) {
+            errorMessage = error.response.data.error
+          } else {
+            errorMessage = `服务器错误（${error.response.status})`
+          }
+        } else {
+          errorMessage = '网络连接失败'
+        }
+        this.$message.error(errorMessage)
       }
     },
     async saveNationalSettings() {
@@ -363,7 +373,17 @@ export default {
         })
         this.$message.success('交通部指标保存成功')
       } catch (error) {
-        this.$message.error('保存失败')
+        let errorMessage = '未知错误'
+        if (error.response) {
+          if (error.response.data.error) {
+            errorMessage = error.response.data.error
+          } else {
+            errorMessage = `服务器错误（${error.response.status})`
+          }
+        } else {
+          errorMessage = '网络连接失败'
+        }
+        this.$message.error(errorMessage)
       }
     }
   }
@@ -372,7 +392,7 @@ export default {
 
 <style scoped>
 .settings-panel {
-  margin: 100px auto 0;
+  margin: 20px auto 0;
   width: 700px;
   position: relative;
   padding: 1px;
