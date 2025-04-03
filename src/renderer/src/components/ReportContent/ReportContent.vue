@@ -34,32 +34,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElTable, ElTableColumn, ElButton, ElDialog, ElMessage } from 'element-plus'
-// 你可能需要一个 Markdown 渲染器，比如 'marked'
-// 安装它: npm install marked
-// 引入它:
-import { marked } from 'marked' // 或者你偏好的 markdown 库
-// 你可能需要 axios 或 fetch 来进行 API 调用
-// 安装它: npm install axios
-import axios from 'axios' // 或者使用 fetch
+import { marked } from 'marked'
+import service from '../../api/request'
+import { on, off } from '../../utils/eventBus'
 
 // --- 响应式状态 ---
 const tableData = ref([])
 const scroll_Table = ref(null)
 const dialogVisible = ref(false) // 控制对话框的显示/隐藏
 const markdownContent = ref('') // 存储从 API 获取的原始 markdown 内容
-
-// --- 数据初始化 ---
-// 为报告模拟唯一ID，用于API调用
-for (let i = 1; i < 6; i++) {
-  tableData.value.push({
-    id: `report_id_${i}`, // 添加了一个 ID 用于演示
-    report: '高速公路抽检路段公路技术状况监管分析报告',
-    // 减去一个随机时间差，让日期看起来不同
-    date: Date.now() - Math.random() * 1000 * 60 * 60 * 24 * 5
-  })
-}
 
 // --- 计算属性 ---
 // 当 markdownContent 变化时安全地渲染它
@@ -75,13 +60,61 @@ const renderedMarkdown = computed(() => {
   return marked.parse(markdownContent.value)
 })
 
+onMounted(() => {
+  fetchReportList()
+  on('refresh-report-list', fetchReportList)
+})
+
+onUnmounted(() => {
+  off('refresh-report-list', fetchReportList)
+})
+
 // --- 方法 ---
+const fetchReportList = async () => {
+  try {
+    const response = await service.get('/api/reports/list') // 调用列表 API
+    const filenames = response.data // 假设返回的是字符串数组
+
+    if (Array.isArray(filenames)) {
+      tableData.value = filenames
+        .map((fullFilename) => {
+          const parts = fullFilename.match(/(.*)_(\d+)\.(docx|md)$/) // 正则匹配 文件名_时间戳.后缀
+          if (parts && parts.length === 4) {
+            const baseName = parts[1]
+            const timestampSeconds = parseInt(parts[2], 10)
+            const extension = parts[3]
+            const reportName = `${baseName}.${extension}`
+            const dateTimestamp = timestampSeconds * 1000
+
+            return {
+              report: reportName, // 解析出的报告名
+              date: dateTimestamp, // 解析出的日期时间戳 (毫秒)
+              originalFilename: fullFilename // 保存原始完整文件名，供后续操作使用
+            }
+          } else {
+            // 如果文件名格式不符，可以返回一个默认对象或 null，然后过滤掉
+            console.warn(`无法解析文件名格式: ${fullFilename}`)
+            return null // 或者返回一个错误提示对象
+          }
+        })
+        .filter((item) => item !== null) // 过滤掉解析失败的项
+    } else {
+      console.error('API /api/reports/list 未返回有效的数组')
+      tableData.value = [] // 清空表格
+      ElMessage.error('获取报告列表失败：响应格式错误')
+    }
+  } catch (error) {
+    console.error('获取报告列表失败:', error)
+    tableData.value = [] // 清空表格
+    ElMessage.error('获取报告列表失败')
+  }
+}
 
 // 2. 日期格式化函数
-// ElTableColumn 的 formatter prop 会接收 row, column, cellValue 四个参数
-const formatDate = (row, column, cellValue) => {
+const formatDate = (cellValue) => {
+  console.log(cellValue)
   if (!cellValue) return '' // 如果值不存在，返回空字符串
-  const date = new Date(cellValue)
+  const date = new Date(cellValue.date)
   const year = date.getFullYear()
   // getMonth() 返回 0-11，所以需要 +1；padStart 确保月份和日期是两位数
   const month = (date.getMonth() + 1).toString().padStart(2, '0')
@@ -94,113 +127,74 @@ const formatDate = (row, column, cellValue) => {
 
 // 4. 处理 "查看" 按钮点击事件
 const handleView = async (row) => {
-  console.log('查看报告:', row) // 在控制台打印行数据，方便调试
-  // **API 调用占位符:**
-  // 用你实际的 API 端点和错误处理逻辑替换下面的代码
   try {
-    // 如果需要，可以显示加载状态，例如改变按钮文本或显示加载指示器
-    markdownContent.value = '# 正在加载内容...' // 设置一个临时的加载提示
-    dialogVisible.value = true // 打开对话框
+    markdownContent.value = '# 正在加载内容...'
+    dialogVisible.value = true
+    const originalFilename = row.originalFilename
+    const lastDotIndex = originalFilename.lastIndexOf('.')
+    const baseFilename =
+      lastDotIndex === -1 ? originalFilename : originalFilename.substring(0, lastDotIndex)
+    const filenameForView = `${baseFilename}.md`
+    const encodedFilename = encodeURIComponent(filenameForView)
+    const response = await service.get(`/api/reports/view/${encodedFilename}`) // 使用完整文件名调用新 API
 
-    // --- 模拟 API 调用 ---
-    // const response = await axios.get(`/api/calculate/md?id=${row.id}`); // 示例 API 调用，传递报告 ID
-    // markdownContent.value = response.data; // 将获取到的 markdown 数据赋值给 state
-    // --- 结束模拟 ---
-
-    // --- 用于演示的静态内容 ---
-    // (用上面的真实 API 调用替换这部分)
-    await new Promise((resolve) => setTimeout(resolve, 500)) // 模拟网络延迟 0.5 秒
-    // 生成一些示例 Markdown 内容
-    markdownContent.value = `
-# ${row.report} - 内容预览
-
-这是 **${row.report}** 的Markdown内容。
-
-- 列表项 1
-- 列表项 2
-
-\`\`\`javascript
-function greet(name) {
-  console.log('你好, ' + name + '!');
-}
-greet('世界');
-\`\`\`
-
-[这是一个示例链接](https://example.com)
-
-*生成日期: ${formatDate(null, null, row.date)}*
-    `
-    // --- 结束静态内容 ---
+    // 假设 API 直接返回 Markdown 文本
+    markdownContent.value = response.data
   } catch (error) {
-    // 处理 API 调用过程中可能发生的错误
     console.error('获取 markdown 内容时出错:', error)
-    ElMessage.error('加载报告内容失败') // 使用 Element Plus 的 Message 组件提示用户
-    markdownContent.value = '加载内容时出错。' // 在对话框中显示错误信息
-    // 可以选择保持对话框打开以显示错误，或者关闭它:
-    // dialogVisible.value = false;
+    // 尝试从 error response 获取更具体的信息
+    const errorMsgFromServer = error.response?.data?.message || error.response?.data?.error
+    ElMessage.error(errorMsgFromServer || '加载报告内容失败')
+    markdownContent.value = `加载内容时出错: ${errorMsgFromServer || error.message || '未知错误'}`
   }
 }
 
 // 5. 处理 "下载" 按钮点击事件
 const handleDownload = async (row) => {
-  console.log('下载报告:', row) // 控制台打印信息
-  // **调用 API 下载文件:**
   try {
-    // 如果需要，显示加载状态 (例如更改按钮文本/图标)
-    ElMessage.info(`正在准备下载 ${row.report}...`) // 提示用户操作正在进行
-
-    // 使用 axios 发起请求
-    const response = await axios({
-      url: `/api/calculate/docx`, // 你的实际后端 API 端点
-      method: 'GET', // 或者根据你的 API 要求使用 'POST'
-      params: {
-        // 将报告标识符 (例如 id) 作为查询参数发送
-        id: row.id
-        // 如果使用 POST，则可能在 data 字段中发送: data: { id: row.id }
-      },
-      responseType: 'blob' // 重要：告诉 axios 期望接收二进制数据 (文件)
+    // 注意：这里不再编码文件名，因为后端会处理
+    const response = await service({
+      url: `/api/reports/download/${row.originalFilename}`,
+      method: 'GET',
+      responseType: 'blob'
     })
 
-    // 从响应数据创建一个 Blob 对象
-    // response.headers['content-type'] 获取文件的 MIME 类型，如果响应头里有的话
     const blob = new Blob([response.data], {
-      type:
-        response.headers['content-type'] ||
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    }) // docx 的 MIME 类型
+      type: response.headers['content-type'] || 'application/octet-stream'
+    })
 
-    // 为 Blob 创建一个临时的 URL
-    const url = window.URL.createObjectURL(blob)
-
-    // 创建一个隐藏的 <a> 标签用于触发下载
-    const link = document.createElement('a')
-    link.href = url // 设置链接指向 Blob URL
-
-    // 从 Content-Disposition 响应头中提取文件名（如果后端设置了的话）
+    // 改进的文件名提取逻辑
+    let filename = row.originalFilename
     const contentDisposition = response.headers['content-disposition']
-    let filename = `${row.report}.docx` // 设置默认文件名
+
     if (contentDisposition) {
-      // 尝试从 header 中解析出 filename="xxx.docx"
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i)
-      if (filenameMatch && filenameMatch.length === 2) {
-        filename = filenameMatch[1] // 获取匹配到的文件名
+      // 优先处理 RFC 5987 编码的文件名 (filename*=UTF-8'')
+      const utf8Filename = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/i)
+      if (utf8Filename && utf8Filename[1]) {
+        filename = decodeURIComponent(utf8Filename[1])
+      } else {
+        // 回退到普通 filename
+        const fallbackFilename = contentDisposition.match(/filename="?([^;"]+)/i)
+        if (fallbackFilename && fallbackFilename[1]) {
+          filename = fallbackFilename[1].replace(/^"(.*)"$/, '$1')
+        }
       }
     }
 
-    link.setAttribute('download', filename) // 设置 download 属性，浏览器会使用这个名字保存文件
-    document.body.appendChild(link) // 将链接添加到页面中（虽然隐藏，但需要存在才能点击）
-    link.click() // 用代码模拟点击链接，触发下载
-
-    // 清理工作：移除添加到页面的链接，并释放之前创建的 Object URL
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 
-    ElMessage.success(`${filename} 下载成功`) // 提示用户下载成功
+    ElMessage.success(`${filename} 下载成功`)
   } catch (error) {
-    // 处理下载过程中可能发生的错误
-    console.error('下载 docx 文件时出错:', error)
-    ElMessage.error('下载文件失败') // 提示用户下载失败
-    // 如果需要，可以根据 error.response.status 等信息处理特定错误 (例如 404 未找到, 500 服务器错误)
+    console.error('下载文件时出错:', error)
+    ElMessage.error('下载文件失败: ' + (error.message || '未知错误'))
   }
 }
 </script>
@@ -248,6 +242,7 @@ const handleDownload = async (row) => {
         thead tr {
           background-color: transparent !important; // 强制表头行 tr 透明
         }
+
         th {
           // 针对表头单元格 (th)
           background-color: rgba(255, 255, 255, 0) !important; // 强制表头单元格背景透明
@@ -278,6 +273,7 @@ const handleDownload = async (row) => {
           background-color: #063570 !important; // 悬停背景色，!important 确保覆盖默认样式
         }
       }
+
       &::before {
         display: none;
       }

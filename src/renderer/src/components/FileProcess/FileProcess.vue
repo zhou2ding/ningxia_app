@@ -136,6 +136,7 @@ import { UploadFilled, QuestionFilled, DocumentAdd } from '@element-plus/icons-v
 import { ElMessage } from 'element-plus'
 import service from '../../api/request'
 import { useUploadStore } from '../../store/upload'
+import { emit } from '../../utils/eventBus'
 
 const uploadStore = useUploadStore()
 
@@ -275,50 +276,65 @@ const handleCalculate = async () => {
   }, 300)
 
   try {
-    const res = await service.post(
-      '/api/calculate',
-      {
-        files: selectedFiles.value,
-        reportType: uploadStore.reportType,
-        mileage: uploadStore.totalMileage,
-        pqi: uploadStore.pqi
-      },
-      {
-        responseType: 'blob'
-      }
-    )
+    const currentTimestamp = Math.floor(Date.now() / 1000); // 秒级时间戳
+    const requestData = {
+      files: selectedFiles.value,
+      reportType: uploadStore.reportType,
+      mileage: uploadStore.totalMileage,
+      pqi: uploadStore.pqi,
+      timestamp: currentTimestamp
+    }
 
-    progress.value = 100
-    await new Promise((resolve) => setTimeout(resolve, 300))
+    // 并行调用两个 API
+    const [docxResponse, mdResponse] = await Promise.all([
+      service.post('/api/calculate/docx', requestData), // 调用 docx 接口
+      service.post('/api/calculate/md', requestData) // 调用 md 接口
+    ])
 
-    // 下载Word文件
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(new Blob([res.data], { type: 'application/msword' }))
-    link.download = 'result.docx'
-    link.click()
+    // 检查两个请求是否都成功返回了数据和文件名
+    if (docxResponse?.data?.filename && mdResponse?.data?.filename) {
+      const docxFilename = docxResponse.data.filename
+      const mdFilename = mdResponse.data.filename
 
-    ElMessage.success('文件导出成功')
+      // 1. 获取当前已存储的文件名列表 (如果不存在则初始化为空数组)
+      let storedFilenames = JSON.parse(localStorage.getItem('reportFilenames') || '[]')
 
-    // 成功处理后清空表单
-    resetUploadForm()
-    files.value = []
-    selectedFiles.value = []
-    uploadStore.reset()
+      // 2. 添加新的文件名 (可以考虑去重，但根据你的描述似乎不需要)
+      storedFilenames.push(docxFilename)
+      storedFilenames.push(mdFilename)
+
+      // 3. 将更新后的列表存回 localStorage
+      localStorage.setItem('reportFilenames', JSON.stringify(storedFilenames))
+
+      progress.value = 100
+      await new Promise((resolve) => setTimeout(resolve, 300)) // 短暂显示100%
+
+      ElMessage.success('报告已生成') // 修改成功提示信息
+
+      // 成功处理后清空表单和文件列表
+      resetUploadForm()
+      files.value = []
+      selectedFiles.value = []
+      uploadStore.reset()
+    }
   } catch (error) {
     let errorMessage
     if (error.response) {
-      if (error.response.data.error) {
-        errorMessage = error.response.data.error
-      } else {
-        errorMessage = `服务器错误（${error.response.status})`
-      }
+      errorMessage =
+        error.response.data?.message ||
+        error.response.data?.error ||
+        `服务器错误 (${error.response.status})`
+    } else if (error.message) {
+      errorMessage = error.message
     } else {
-      errorMessage = '网络连接失败'
+      errorMessage = '网络连接失败或未知错误'
     }
     ElMessage.error(errorMessage)
+    progress.value = 0
   } finally {
     clearInterval(timer)
     isCalculating.value = false
+    emit('refresh-report-list')
   }
 }
 
