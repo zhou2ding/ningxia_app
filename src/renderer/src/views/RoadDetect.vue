@@ -48,11 +48,6 @@ export default {
   flex-wrap: wrap;
 }
 
-.map-container:hover .coming-soon-overlay,
-.rank-container:hover .coming-soon-overlay {
-  opacity: 1;
-}
-
 .file-process {
   width: 350px;
   height: 440px;
@@ -60,8 +55,8 @@ export default {
   margin-bottom: 50px;
 }
 .report-process {
-  width: 700px;
-  height: 440px;
+  width: 520px;
+  height: 482px;
   margin-right: 50px;
   margin-bottom: 50px;
 }

@@ -22,7 +22,7 @@
     <!-- 文件列表 -->
     <div class="file-list">
       <div v-if="files.length" class="check-all">
-        <el-checkbox :indeterminate="isIndeterminate" v-model="checkAll" @change="handleCheckAll">
+        <el-checkbox v-model="checkAll" :indeterminate="isIndeterminate" @change="handleCheckAll">
           全选
         </el-checkbox>
       </div>
@@ -58,7 +58,12 @@
             placeholder="请选择报告类型"
             class="form-input"
           >
-            <el-option v-for="item in reportTypes" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option
+              v-for="item in reportTypes"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
 
@@ -240,7 +245,7 @@ const handleUploadConfirm = async () => {
     await new Promise((resolve) => setTimeout(resolve, 300))
     ElMessage.success('文件上传成功')
   } catch (error) {
-    let errorMessage = '未知错误'
+    let errorMessage
     if (error.response) {
       if (error.response.data.error) {
         errorMessage = error.response.data.error
@@ -300,7 +305,7 @@ const handleCalculate = async () => {
     selectedFiles.value = []
     uploadStore.reset()
   } catch (error) {
-    let errorMessage = '未知错误'
+    let errorMessage
     if (error.response) {
       if (error.response.data.error) {
         errorMessage = error.response.data.error
@@ -417,14 +422,5 @@ const handleCheckAll = (value) => {
   margin-top: 8px;
   color: #666;
   font-size: 14px;
-}
-
-.el-upload__tip {
-  margin-top: 8px;
-  color: #999;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 </style>
