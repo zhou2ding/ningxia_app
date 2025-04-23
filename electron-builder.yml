@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.roaddetect.app
 productName: RoadDetect
 directories:
   buildResources: build
@@ -9,10 +9,9 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
 extraResources:
-  - from: "backend/RoadDetect.exe"
-    to: "RoadDetect.exe"
-  - from: "backend/nssm.exe"
-    to: "nssm.exe"
+  - from: "backend"
+    to: "backend"
+    filter: ["**/*"]
 asarUnpack:
   - resources/**
 win:

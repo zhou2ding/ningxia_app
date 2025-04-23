@@ -1,5 +1,5 @@
 {
-  "name": "ningxia-app",
+  "name": "RoadDetect-app",
   "version": "1.0.0",
   "description": "An Electron application with Vue",
   "main": "./out/main/index.js",
@@ -34,7 +34,7 @@
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "electron": "^34.2.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^3.0.0",
     "eslint": "^9.20.1",
     "eslint-plugin-vue": "^9.32.0",
