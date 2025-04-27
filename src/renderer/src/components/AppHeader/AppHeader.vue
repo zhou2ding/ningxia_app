@@ -1,6 +1,6 @@
 <template>
   <div class="header">
-    <h1>公路路况检测</h1>
+    <h1>公路养护监管分析报告生成</h1>
   </div>
 </template>
 
@@ -20,7 +20,7 @@
 
 .header h1 {
   color: white;
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 400;
 }
 </style>

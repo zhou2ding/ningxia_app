@@ -1,6 +1,6 @@
 <template>
   <div class="topBar">
-    <div class="topBar-left">公路路况检测设备数据应用系统</div>
+    <div class="topBar-left">公路养护监管应用系统</div>
     <div class="topBar-right">
       <span class="user-info"><i class="icon-user"></i>用户</span>
       <button class="logout-button">退出</button>
