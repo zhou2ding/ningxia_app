@@ -55,7 +55,7 @@ export default {
   margin-bottom: 50px;
 }
 .report-process {
-  width: 520px;
+  width: 650px;
   height: 482px;
   margin-right: 50px;
   margin-bottom: 50px;

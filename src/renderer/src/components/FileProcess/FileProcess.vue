@@ -90,22 +90,34 @@
         </el-form-item>
 
         <el-form-item label="上传文件" prop="file">
-          <el-upload
-            action="#"
-            :auto-upload="false"
-            :on-change="handleFileChange"
-            :show-file-list="false"
-            accept=".zip"
-          >
-            <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
-            <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
-              <el-icon class="hint-icon">
-                <QuestionFilled />
-              </el-icon>
-            </el-tooltip>
-          </el-upload>
-          <div v-if="uploadForm.file" class="file-name">
-            {{ uploadForm.file.name }}
+          <div class="file-upload-container">
+            <el-upload
+              action="#"
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :show-file-list="false"
+              accept=".zip"
+            >
+              <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
+              <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
+                <el-icon class="hint-icon">
+                  <QuestionFilled />
+                </el-icon>
+              </el-tooltip>
+            </el-upload>
+            <div v-if="uploadForm.file" class="file-card">
+              <div class="file-info">
+                <el-icon class="file-icon"><Document /></el-icon>
+                <span class="file-name">{{ uploadForm.file.name }}</span>
+              </div>
+              <el-button
+                type="danger"
+                :icon="Delete"
+                circle
+                size="small"
+                @click="removeSelectedFile"
+              />
+            </div>
           </div>
         </el-form-item>
       </el-form>
@@ -126,13 +138,16 @@
     <!-- 进度条遮罩 -->
     <div v-if="isUploading || isCalculating" class="progress-mask">
       <el-progress type="circle" :percentage="progress" :width="80" color="#5fbfff" />
+      <div class="progress-text">
+        {{ progressStatusText }}
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { UploadFilled, QuestionFilled, DocumentAdd } from '@element-plus/icons-vue'
+import { ref, computed, watch } from 'vue'
+import { UploadFilled, QuestionFilled, DocumentAdd, Delete, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import service from '../../api/request'
 import { useUploadStore } from '../../store/upload'
@@ -162,6 +177,12 @@ const selectedFiles = ref([])
 const isCalculating = ref(false)
 const isUploading = ref(false)
 const progress = ref(0)
+const progressStatusText = ref('正在处理...')
+
+const progressSpeed = computed(() => {
+  return isCalculating.value ? 1 : 2
+})
+
 const checkAll = computed({
   get() {
     return selectedFiles.value.length === files.value.length
@@ -178,6 +199,10 @@ const isIndeterminate = computed(() => {
 const isFormValid = computed(() => {
   return uploadForm.value.reportType && uploadForm.value.totalMileage > 0 && uploadForm.value.file
 })
+
+const removeSelectedFile = () => {
+  uploadForm.value.file = null
+}
 
 const showUploadDialog = () => {
   uploadDialogVisible.value = true
@@ -209,6 +234,21 @@ const resetUploadForm = () => {
   }
 }
 
+const resetFileList = () => {
+  files.value = []
+  selectedFiles.value = []
+}
+
+const updateProgressText = () => {
+  if (isUploading.value) {
+    progressStatusText.value = `上传中 ${progress.value}%`
+  } else if (isCalculating.value) {
+    progressStatusText.value = `计算中 ${progress.value}%`
+  }
+}
+
+watch(progress, updateProgressText)
+
 const handleUploadConfirm = async () => {
   if (!isFormValid.value) {
     ElMessage.warning('请填写完整信息')
@@ -226,11 +266,11 @@ const handleUploadConfirm = async () => {
   isUploading.value = true
   uploadDialogVisible.value = false
   progress.value = 0
+  progressStatusText.value = '上传中 0%'
 
   const timer = setInterval(() => {
     if (progress.value < 90) {
-      const increment = Math.floor(Math.random() * 10 + 5)
-      progress.value = Math.min(progress.value + increment, 99)
+      progress.value = Math.min(progress.value + progressSpeed.value * 2, 99)
     }
   }, 300)
 
@@ -243,7 +283,8 @@ const handleUploadConfirm = async () => {
     files.value = res.data.files
 
     progress.value = 100
-    await new Promise((resolve) => setTimeout(resolve, 300))
+    progressStatusText.value = '上传完成'
+    await new Promise((resolve) => setTimeout(resolve, 500))
     ElMessage.success('文件上传成功')
   } catch (error) {
     let errorMessage
@@ -267,16 +308,16 @@ const handleUploadConfirm = async () => {
 const handleCalculate = async () => {
   isCalculating.value = true
   progress.value = 0
+  progressStatusText.value = '计算中 0%'
 
   const timer = setInterval(() => {
     if (progress.value < 90) {
-      const increment = Math.floor(Math.random() * 10 + 5)
-      progress.value = Math.min(progress.value + increment, 99)
+      progress.value = Math.min(progress.value + progressSpeed.value, 99)
     }
-  }, 300)
+  }, 500)
 
   try {
-    const currentTimestamp = Math.floor(Date.now() / 1000); // 秒级时间戳
+    const currentTimestamp = Math.floor(Date.now() / 1000)
     const requestData = {
       files: selectedFiles.value,
       reportType: uploadStore.reportType,
@@ -285,36 +326,27 @@ const handleCalculate = async () => {
       timestamp: currentTimestamp
     }
 
-    // 并行调用两个 API
     const [docxResponse, mdResponse] = await Promise.all([
-      service.post('/api/calculate/docx', requestData), // 调用 docx 接口
-      service.post('/api/calculate/md', requestData) // 调用 md 接口
+      service.post('/api/calculate/docx', requestData),
+      service.post('/api/calculate/md', requestData)
     ])
 
-    // 检查两个请求是否都成功返回了数据和文件名
     if (docxResponse?.data?.filename && mdResponse?.data?.filename) {
       const docxFilename = docxResponse.data.filename
       const mdFilename = mdResponse.data.filename
 
-      // 1. 获取当前已存储的文件名列表 (如果不存在则初始化为空数组)
       let storedFilenames = JSON.parse(localStorage.getItem('reportFilenames') || '[]')
-
-      // 2. 添加新的文件名 (可以考虑去重，但根据你的描述似乎不需要)
       storedFilenames.push(docxFilename)
       storedFilenames.push(mdFilename)
-
-      // 3. 将更新后的列表存回 localStorage
       localStorage.setItem('reportFilenames', JSON.stringify(storedFilenames))
 
       progress.value = 100
-      await new Promise((resolve) => setTimeout(resolve, 300)) // 短暂显示100%
+      progressStatusText.value = '计算完成'
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-      ElMessage.success('报告已生成') // 修改成功提示信息
-
-      // 成功处理后清空表单和文件列表
+      ElMessage.success('报告已生成')
       resetUploadForm()
-      files.value = []
-      selectedFiles.value = []
+      resetFileList() // 清空文件列表
       uploadStore.reset()
     }
   } catch (error) {
@@ -426,17 +458,57 @@ const handleCheckAll = (value) => {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  z-index: 10;
+}
+
+.progress-text {
+  margin-top: 15px;
+  color: white;
+  font-size: 16px;
 }
 
 .form-input {
   width: 100%;
 }
 
+.file-upload-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background-color: #f8f8f8;
+  border-radius: 4px;
+  border: 1px solid #eaeaea;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  margin-right: 10px;
+}
+
+.file-icon {
+  color: #5fbfff;
+  margin-right: 8px;
+  font-size: 18px;
+}
+
 .file-name {
-  margin-top: 8px;
-  color: #666;
+  color: #333;
   font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
