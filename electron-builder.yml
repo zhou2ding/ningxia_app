@@ -1,5 +1,5 @@
-appId: com.roaddetect.app
-productName: RoadDetect
+appId: com.roadsupervision.app
+productName: RoadSupervision
 directories:
   buildResources: build
 files:
