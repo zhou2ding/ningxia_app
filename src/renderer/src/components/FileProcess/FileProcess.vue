@@ -57,12 +57,14 @@
             v-model="uploadForm.reportType"
             placeholder="请选择报告类型"
             class="form-input"
+            clearable
           >
             <el-option
               v-for="item in reportTypes"
               :key="item.value"
               :label="item.label"
               :value="item.value"
+              :disabled="item.disabled"
             />
           </el-select>
         </el-form-item>
@@ -78,7 +80,7 @@
           <span style="margin-left: 10px">km</span>
         </el-form-item>
 
-        <el-form-item label="PQI指标" prop="pqi">
+        <el-form-item v-if="showPqiField" label="PQI指标" prop="pqi">
           <el-input-number
             v-model="uploadForm.pqi"
             :min="0"
@@ -107,7 +109,9 @@
             </el-upload>
             <div v-if="uploadForm.file" class="file-card">
               <div class="file-info">
-                <el-icon class="file-icon"><Document /></el-icon>
+                <el-icon class="file-icon">
+                  <Document />
+                </el-icon>
                 <span class="file-name">{{ uploadForm.file.name }}</span>
               </div>
               <el-button
@@ -147,7 +151,13 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { UploadFilled, QuestionFilled, DocumentAdd, Delete, Document } from '@element-plus/icons-vue'
+import {
+  UploadFilled,
+  QuestionFilled,
+  DocumentAdd,
+  Delete,
+  Document
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import service from '../../api/request'
 import { useUploadStore } from '../../store/upload'
@@ -159,7 +169,7 @@ const reportTypes = [
   { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY' },
   { label: '工程后评价技术状况监管分析报告', value: 'POST_EVALUATION' },
   { label: '建设工程路段技术状况监管分析报告', value: 'CONSTRUCTION' },
-  { label: '农村路抽检路段公路技术状况监管分析报告', value: 'RURAL' },
+  { label: '农村路抽检路段公路技术状况监管分析报告', value: 'RURAL', disabled: true },
   { label: '普通国省干线抽检路段公路技术状况监管分析报告', value: 'NATIONAL_PROVINCIAL' },
   { label: '市场化路段抽检路段公路技术状况监管分析报告', value: 'MARKET' }
 ]
@@ -377,6 +387,12 @@ const getFileName = (path) => {
 const handleCheckAll = (value) => {
   selectedFiles.value = value ? [...files.value] : []
 }
+
+const showPqiField = computed(() => {
+  return ['EXPRESSWAY', 'RURAL', 'NATIONAL_PROVINCIAL', 'MARKET'].includes(
+    uploadForm.value.reportType
+  )
+})
 </script>
 
 <style scoped>
