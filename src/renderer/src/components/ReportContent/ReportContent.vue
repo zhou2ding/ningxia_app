@@ -18,12 +18,14 @@
       ></el-table-column>
       <el-table-column #default="scope" width="250" label="操作">
         <el-button type="primary" link @click="handleView(scope.row)">查看</el-button>
-        <el-button type="primary" link @click="handleDownload(scope.row)">下载</el-button>
+        <el-button type="primary" link @click="prepareDownload(scope.row, 'download')"
+          >下载</el-button
+        >
         <el-button
           v-if="shouldShowExtraExport(scope.row.report)"
           type="primary"
           link
-          @click="handleExtraExport(scope.row)"
+          @click="prepareDownload(scope.row, 'extraExport')"
         >
           导出达标情况
         </el-button>
@@ -41,12 +43,110 @@
         </span>
       </template>
     </el-dialog>
+
+    <el-dialog
+      v-model="watermarkDialogVisible"
+      title="下载选项"
+      width="500px"
+      @closed="resetWatermarkState"
+    >
+      <div v-if="askForWatermark">
+        <p style="margin-bottom: 20px; text-align: center; font-size: 16px">
+          是否为下载的文件添加水印？
+        </p>
+        <div style="text-align: center">
+          <el-button type="primary" @click="selectWatermarkOption(true)">是，添加水印</el-button>
+          <el-button @click="selectWatermarkOption(false)">否，直接下载</el-button>
+        </div>
+      </div>
+
+      <div v-if="showWatermarkForm">
+        <el-form
+          ref="watermarkFormRef"
+          :model="watermarkForm"
+          :rules="watermarkFormRules"
+          label-width="100px"
+        >
+          <el-form-item label="水印内容" prop="content">
+            <el-input
+              v-model="watermarkForm.content"
+              maxlength="10"
+              placeholder="最多10个字符"
+              show-word-limit
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="水印颜色" prop="color">
+            <el-color-picker v-model="watermarkForm.color" />
+            <el-input
+              v-model="watermarkForm.color"
+              style="width: 120px; margin-left: 10px"
+              placeholder="色号如 #E3E3E3"
+            ></el-input>
+          </el-form-item>
+          <el-form-item label="透明度" prop="opacity">
+            <el-input-number
+              v-model="watermarkForm.opacity"
+              :min="0"
+              :max="100"
+              controls-position="right"
+            />
+            <span style="margin-left: 5px">%</span>
+          </el-form-item>
+          <el-form-item label="字号大小" prop="fontSize">
+            <el-input-number
+              v-model="watermarkForm.fontSize"
+              :min="10"
+              :max="200"
+              controls-position="right"
+            />
+            <span style="margin-left: 5px">px</span>
+          </el-form-item>
+          <el-form-item label="倾斜角度" prop="angle">
+            <el-input-number
+              v-model="watermarkForm.angle"
+              :min="-360"
+              :max="360"
+              controls-position="right"
+            />
+            <span style="margin-left: 5px">°</span>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <div
+        v-if="!askForWatermark && !showWatermarkForm"
+        style="text-align: center; padding: 20px 0"
+      >
+        <p>将下载原始文件，不添加水印。</p>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="watermarkDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmDownload" :disabled="askForWatermark"
+            >确认下载</el-button
+          >
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { ElTable, ElTableColumn, ElButton, ElDialog, ElMessage, ElMessageBox } from 'element-plus'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
+import {
+  ElTable,
+  ElTableColumn,
+  ElButton,
+  ElDialog,
+  ElMessage,
+  ElMessageBox,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElColorPicker,
+  ElInputNumber
+} from 'element-plus'
 import { marked } from 'marked'
 import service from '../../api/request'
 import { on, off } from '../../utils/eventBus'
@@ -54,8 +154,33 @@ import { on, off } from '../../utils/eventBus'
 // --- 响应式状态 ---
 const tableData = ref([])
 const scroll_Table = ref(null)
-const dialogVisible = ref(false) // 控制对话框的显示/隐藏
+const dialogVisible = ref(false) // 控制查看报告对话框的显示/隐藏
 const markdownContent = ref('') // 存储从 API 获取的原始 markdown 内容
+
+// --- 水印相关状态 ---
+const watermarkDialogVisible = ref(false)
+const askForWatermark = ref(true) // 初始显示是否添加水印的选项
+const showWatermarkForm = ref(false) // 是否显示水印表单
+const currentRowForDownload = ref(null) // 当前要下载的行数据
+const currentDownloadType = ref('') // 'download' or 'extraExport'
+const watermarkFormRef = ref(null) // 水印表单的引用
+
+const initialWatermarkFormData = {
+  content: '',
+  color: '#E3E3E3',
+  opacity: 35,
+  fontSize: 50,
+  angle: 45
+}
+const watermarkForm = reactive({ ...initialWatermarkFormData })
+
+const watermarkFormRules = {
+  content: [{ required: true, message: '请输入水印内容', trigger: 'blur' }],
+  color: [{ required: true, message: '请选择或输入水印颜色', trigger: 'blur' }],
+  opacity: [{ required: true, message: '请输入透明度', trigger: 'blur', type: 'number' }],
+  fontSize: [{ required: true, message: '请输入字号大小', trigger: 'blur', type: 'number' }],
+  angle: [{ required: true, message: '请输入倾斜角度', trigger: 'blur', type: 'number' }]
+}
 
 // --- 计算属性 ---
 // 当 markdownContent 变化时安全地渲染它
@@ -158,11 +283,96 @@ const handleView = async (row) => {
   }
 }
 
-// 处理 "下载" 按钮点击事件
-const handleDownload = async (row) => {
+const resetWatermarkState = () => {
+  askForWatermark.value = true
+  showWatermarkForm.value = false
+  Object.assign(watermarkForm, initialWatermarkFormData) // Reset form
+  if (watermarkFormRef.value) {
+    watermarkFormRef.value.resetFields() // Reset validation state
+  }
+  currentRowForDownload.value = null
+  currentDownloadType.value = ''
+}
+
+const prepareDownload = (row, type) => {
+  currentRowForDownload.value = row
+  currentDownloadType.value = type
+  resetWatermarkState() // Ensure dialog is in initial state
+  askForWatermark.value = true // Explicitly set to ask
+  showWatermarkForm.value = false
+  watermarkDialogVisible.value = true
+}
+
+const selectWatermarkOption = (addWatermark) => {
+  askForWatermark.value = false
+  if (addWatermark) {
+    showWatermarkForm.value = true
+    // Reset form to defaults when 'Yes' is chosen
+    Object.assign(watermarkForm, initialWatermarkFormData)
+    if (watermarkFormRef.value) {
+      watermarkFormRef.value.clearValidate() // Clear previous validation messages
+    }
+  } else {
+    showWatermarkForm.value = false
+  }
+}
+
+const confirmDownload = async () => {
+  if (showWatermarkForm.value) {
+    // User chose to add watermark
+    if (!watermarkFormRef.value) return
+    watermarkFormRef.value.validate(async (valid) => {
+      if (valid) {
+        await triggerActualDownload(
+          currentRowForDownload.value,
+          currentDownloadType.value,
+          watermarkForm
+        )
+        watermarkDialogVisible.value = false
+      } else {
+        ElMessage.error('请填写所有必填的水印信息')
+        return false
+      }
+    })
+  } else {
+    // User chose not to add watermark or confirmed "No" choice
+    await triggerActualDownload(currentRowForDownload.value, currentDownloadType.value, null)
+    watermarkDialogVisible.value = false
+  }
+}
+
+// 核心下载逻辑，带水印参数
+const triggerActualDownload = async (row, type, watermarkParams = null) => {
+  if (!row || !type) {
+    ElMessage.error('下载参数错误')
+    return
+  }
+
   try {
+    let url = ''
+    const originalFilename = row.originalFilename
+
+    if (type === 'download') {
+      url = `/api/reports/download/${originalFilename}`
+    } else if (type === 'extraExport') {
+      url = `/api/reports/extraExport/${originalFilename}`
+    } else {
+      ElMessage.error('未知的下载类型')
+      return
+    }
+
+    const queryParams = new URLSearchParams()
+    if (watermarkParams) {
+      queryParams.append('wm_content', watermarkParams.content)
+      queryParams.append('wm_color', watermarkParams.color)
+      queryParams.append('wm_opacity', watermarkParams.opacity)
+      queryParams.append('wm_fontSize', watermarkParams.fontSize)
+      queryParams.append('wm_angle', watermarkParams.angle)
+      url += `?${queryParams.toString()}`
+    }
+
     const response = await service({
-      url: `/api/reports/download/${row.originalFilename}`,
+      url: url,
       method: 'GET',
       responseType: 'blob'
     })
@@ -171,9 +381,13 @@ const handleDownload = async (row) => {
       type: response.headers['content-type'] || 'application/octet-stream'
     })
 
-    let filename = row.originalFilename
-    const contentDisposition = response.headers['content-disposition']
+    let filename = originalFilename // Default filename
+    if (type === 'extraExport' && !watermarkParams) {
+      // Backend might provide a name like "originalFilename_extra.xlsx"
+      // If watermarking, backend should handle filename modification if any
+    }
 
+    const contentDisposition = response.headers['content-disposition']
     if (contentDisposition) {
       const utf8Filename = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/i)
       if (utf8Filename && utf8Filename[1]) {
@@ -181,73 +395,30 @@ const handleDownload = async (row) => {
       } else {
         const fallbackFilename = contentDisposition.match(/filename="?([^;"]+)/i)
         if (fallbackFilename && fallbackFilename[1]) {
-          filename = fallbackFilename[1].replace(/^"(.*)"$/, '$1')
+          filename = fallbackFilename[1].replace(/^"(.*)"$/, '$1') // Remove surrounding quotes if any
         }
       }
     }
 
-    const url = window.URL.createObjectURL(blob)
+    const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = url
+    link.href = downloadUrl
     link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+    window.URL.revokeObjectURL(downloadUrl)
 
     ElMessage.success(`${filename} 下载成功`)
   } catch (error) {
-    console.error('下载文件时出错:', error)
-    ElMessage.error('下载文件失败: ' + (error.message || '未知错误'))
-  }
-}
-
-// 处理 "导出达标情况" 按钮点击事件
-const handleExtraExport = async (row) => {
-  try {
-    // 直接使用原始文件名调用API，不要修改文件名
-    const originalFilename = row.originalFilename
-
-    const response = await service({
-      url: `/api/reports/extraExport/${originalFilename}`,
-      method: 'GET',
-      responseType: 'blob'
-    })
-
-    const blob = new Blob([response.data], {
-      type: response.headers['content-type'] || 'application/octet-stream'
-    })
-
-    // 从响应头获取文件名（后端会返回正确的带_extra的文件名）
-    let downloadFilename = originalFilename
-    const contentDisposition = response.headers['content-disposition']
-
-    if (contentDisposition) {
-      const utf8Filename = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/i)
-      if (utf8Filename && utf8Filename[1]) {
-        downloadFilename = decodeURIComponent(utf8Filename[1])
-      } else {
-        const fallbackFilename = contentDisposition.match(/filename="?([^;"]+)/i)
-        if (fallbackFilename && fallbackFilename[1]) {
-          downloadFilename = fallbackFilename[1].replace(/^"(.*)"$/, '$1')
-        }
-      }
-    }
-
-    // 创建下载链接
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = downloadFilename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-
-    ElMessage.success(`达标情况导出成功`)
-  } catch (error) {
-    console.error('导出达标情况时出错:', error)
-    ElMessage.error('导出达标情况失败: ' + (error.message || '未知错误'))
+    console.error(`文件${type === 'download' ? '下载' : '导出'}时出错:`, error)
+    ElMessage.error(
+      `文件${type === 'download' ? '下载' : '导出'}失败: ` +
+        (error.response?.data?.message ||
+          error.response?.data?.error ||
+          error.message ||
+          '未知错误')
+    )
   }
 }
 
@@ -376,5 +547,14 @@ const handleDelete = async (row) => {
     border-radius: 3px;
     font-size: 0.9em;
   }
+}
+
+/* Style for watermark form items for better spacing if needed */
+.el-form-item {
+  margin-bottom: 22px;
+}
+
+.el-color-picker {
+  vertical-align: middle; /* Align color picker nicely with input */
 }
 </style>
