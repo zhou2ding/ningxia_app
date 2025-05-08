@@ -19,8 +19,8 @@
       <el-table-column #default="scope" width="250" label="操作">
         <el-button type="primary" link @click="handleView(scope.row)">查看</el-button>
         <el-button type="primary" link @click="prepareDownload(scope.row, 'download')"
-          >下载</el-button
-        >
+          >下载
+        </el-button>
         <el-button
           v-if="shouldShowExtraExport(scope.row.report)"
           type="primary"
@@ -83,7 +83,7 @@
               placeholder="色号如 #E3E3E3"
             ></el-input>
           </el-form-item>
-          <el-form-item label="透明度" prop="opacity">
+          <el-form-item label="不透明度" prop="opacity">
             <el-input-number
               v-model="watermarkForm.opacity"
               :min="0"
@@ -98,6 +98,7 @@
               :min="10"
               :max="200"
               controls-position="right"
+              :precision="0"
             />
             <span style="margin-left: 5px">px</span>
           </el-form-item>
@@ -145,7 +146,8 @@ import {
   ElFormItem,
   ElInput,
   ElColorPicker,
-  ElInputNumber
+  ElInputNumber,
+  ElLoading
 } from 'element-plus'
 import { marked } from 'marked'
 import service from '../../api/request'
@@ -166,9 +168,9 @@ const currentDownloadType = ref('') // 'download' or 'extraExport'
 const watermarkFormRef = ref(null) // 水印表单的引用
 
 const initialWatermarkFormData = {
-  content: '',
+  content: '宁夏公路管理中心',
   color: '#E3E3E3',
-  opacity: 35,
+  opacity: 65,
   fontSize: 50,
   angle: 45
 }
@@ -286,20 +288,35 @@ const handleView = async (row) => {
 const resetWatermarkState = () => {
   askForWatermark.value = true
   showWatermarkForm.value = false
-  Object.assign(watermarkForm, initialWatermarkFormData) // Reset form
+  Object.assign(watermarkForm, initialWatermarkFormData) // 重置表单
   if (watermarkFormRef.value) {
-    watermarkFormRef.value.resetFields() // Reset validation state
+    watermarkFormRef.value.resetFields() // 重置验证状态
   }
-  currentRowForDownload.value = null
-  currentDownloadType.value = ''
+  currentRowForDownload.value = null // 对话框关闭后，清除当前操作的行数据
+  currentDownloadType.value = '' // 对话框关闭后，清除当前操作类型
 }
 
 const prepareDownload = (row, type) => {
+  // 1. 设置当前要下载的报告行数据和下载类型
   currentRowForDownload.value = row
   currentDownloadType.value = type
-  resetWatermarkState() // Ensure dialog is in initial state
-  askForWatermark.value = true // Explicitly set to ask
-  showWatermarkForm.value = false
+
+  // 2. 重置水印对话框的UI状态，为新的下载会话做准备
+  askForWatermark.value = true // 初始显示“是否添加水印”的选项
+  showWatermarkForm.value = false // 初始隐藏水印表单
+
+  // 3. 将水印表单数据重置为初始默认值
+  Object.assign(watermarkForm, initialWatermarkFormData)
+
+  // 4. 如果水印表单的引用存在 (即表单曾被渲染过)，则重置其字段状态
+  //    这会清除之前可能存在的用户输入和验证错误信息
+  if (watermarkFormRef.value) {
+    watermarkFormRef.value.resetFields()
+  }
+
+  // 5. 显示水印对话框
+  // 此时，currentRowForDownload 和 currentDownloadType 已被正确设置，
+  // 并且它们的值会保持到对话框关闭 (关闭时 @closed 事件会调用 resetWatermarkState 进行最终清理)。
   watermarkDialogVisible.value = true
 }
 
@@ -342,11 +359,21 @@ const confirmDownload = async () => {
 }
 
 // 核心下载逻辑，带水印参数
+let loadingInstance = null
 const triggerActualDownload = async (row, type, watermarkParams = null) => {
   if (!row || !type) {
     ElMessage.error('下载参数错误')
     return
   }
+
+  // 显示加载指示器
+  loadingInstance = ElLoading.service({
+    lock: true, // 锁屏，用户无法进行其他操作
+    text: '正在准备文件并下载，请稍候...', // 加载时显示的文字
+    background: 'rgba(0, 0, 0, 0.7)' // 半透明背景
+    // spinner: 'el-icon-loading', // 如果需要自定义 spinner 样式 (Element Plus 3.x 使用 SVG 或自定义 class)
+    // target: document.body, // 确保覆盖整个页面，通常默认就是 document.body
+  })
 
   try {
     let url = ''
@@ -358,6 +385,9 @@ const triggerActualDownload = async (row, type, watermarkParams = null) => {
       url = `/api/reports/extraExport/${originalFilename}`
     } else {
       ElMessage.error('未知的下载类型')
+      if (loadingInstance) {
+        loadingInstance.close()
+      }
       return
     }
 
@@ -366,7 +396,7 @@ const triggerActualDownload = async (row, type, watermarkParams = null) => {
       queryParams.append('wm_content', watermarkParams.content)
       queryParams.append('wm_color', watermarkParams.color)
       queryParams.append('wm_opacity', watermarkParams.opacity)
-      queryParams.append('wm_fontSize', watermarkParams.fontSize)
+      queryParams.append('wm_font_size', watermarkParams.fontSize)
       queryParams.append('wm_angle', watermarkParams.angle)
       url += `?${queryParams.toString()}`
     }
@@ -419,6 +449,10 @@ const triggerActualDownload = async (row, type, watermarkParams = null) => {
           error.message ||
           '未知错误')
     )
+  } finally {
+    if (loadingInstance) {
+      loadingInstance.close()
+    }
   }
 }
 
