@@ -218,18 +218,16 @@ const fetchReportList = async () => {
     if (Array.isArray(filenames)) {
       tableData.value = filenames
         .map((fullFilename) => {
-          const parts = fullFilename.match(/(.*)_(\d+)\.(docx|md)$/) // 正则匹配 文件名_时间戳.后缀
-          if (parts && parts.length === 4) {
+          const parts = fullFilename.match(/(.*)_(\d+)$/) // 正则：匹配 文件名_时间戳
+          if (parts && parts.length === 3) {
             const baseName = parts[1]
             const timestampSeconds = parseInt(parts[2], 10)
-            const extension = parts[3]
-            const reportName = `${baseName}.${extension}`
             const dateTimestamp = timestampSeconds * 1000
 
             return {
-              report: reportName, // 解析出的报告名
+              report: baseName, // 直接使用文件名部分
               date: dateTimestamp, // 解析出的日期时间戳 (毫秒)
-              originalFilename: fullFilename // 保存原始完整文件名，供后续操作使用
+              originalFilename: fullFilename // 保存原始完整文件名
             }
           } else {
             console.warn(`无法解析文件名格式: ${fullFilename}`)
@@ -380,9 +378,9 @@ const triggerActualDownload = async (row, type, watermarkParams = null) => {
     const originalFilename = row.originalFilename
 
     if (type === 'download') {
-      url = `/api/reports/download/${originalFilename}`
+      url = `/api/reports/export/${originalFilename}.md`
     } else if (type === 'extraExport') {
-      url = `/api/reports/extraExport/${originalFilename}`
+      url = `/api/reports/extraExport/${originalFilename}.md`
     } else {
       ElMessage.error('未知的下载类型')
       if (loadingInstance) {

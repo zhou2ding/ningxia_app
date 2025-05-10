@@ -337,7 +337,7 @@ const handleCalculate = async () => {
     }
 
     const [docxResponse, mdResponse] = await Promise.all([
-      service.post('/api/calculate/docx', requestData),
+      // service.post('/api/calculate/docx', requestData),
       service.post('/api/calculate/md', requestData)
     ])
 
