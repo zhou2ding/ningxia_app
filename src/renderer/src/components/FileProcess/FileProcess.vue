@@ -47,7 +47,7 @@
     <!-- 上传文件对话框 -->
     <el-dialog
       v-model="uploadDialogVisible"
-      title="上传文件"
+      title="上传数据"
       width="500px"
       :before-close="handleDialogClose"
     >
@@ -91,7 +91,7 @@
           />
         </el-form-item>
 
-        <el-form-item label="上传文件" prop="file">
+        <el-form-item label="上传数据" prop="file">
           <div class="file-upload-container">
             <el-upload
               action="#"
@@ -167,11 +167,11 @@ const uploadStore = useUploadStore()
 
 const reportTypes = [
   { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY' },
-  { label: '工程后评价技术状况监管分析报告', value: 'POST_EVALUATION' },
+  { label: '养护工程路段技术状况监管分析报告', value: 'MAINTENANCE' },
   { label: '建设工程路段技术状况监管分析报告', value: 'CONSTRUCTION' },
-  { label: '农村路抽检路段公路技术状况监管分析报告', value: 'RURAL', disabled: true },
-  { label: '普通国省干线抽检路段公路技术状况监管分析报告', value: 'NATIONAL_PROVINCIAL' },
-  { label: '市场化路段抽检路段公路技术状况监管分析报告', value: 'MARKET' }
+  { label: '农村公路抽检路段公路技术状况监管分析报告', value: 'RURAL' },
+  { label: '普通国省干线抽检路段公路技术状况监管分析报告', value: 'NATIONAL_PROVINCIAL' }
+  // { label: '市场化路段抽检路段公路技术状况监管分析报告', value: 'MARKET' }
 ]
 
 const uploadDialogVisible = ref(false)
@@ -389,9 +389,7 @@ const handleCheckAll = (value) => {
 }
 
 const showPqiField = computed(() => {
-  return ['EXPRESSWAY', 'RURAL', 'NATIONAL_PROVINCIAL', 'MARKET'].includes(
-    uploadForm.value.reportType
-  )
+  return ['EXPRESSWAY', 'RURAL', 'NATIONAL_PROVINCIAL'].includes(uploadForm.value.reportType)
 })
 </script>
 
