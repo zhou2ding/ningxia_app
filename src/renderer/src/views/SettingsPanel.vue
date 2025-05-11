@@ -17,7 +17,7 @@
                 :max="100"
                 controls-position="right"
               />
-              %
+              <span class="unit-suffix">%</span>
             </el-form-item>
             <el-form-item label="总里程">
               <el-input-number
@@ -25,7 +25,7 @@
                 :min="0"
                 controls-position="right"
               />
-              km
+              <span class="unit-suffix">km</span>
             </el-form-item>
             <el-button type="primary" @click="saveCalculationSettings">保存设置</el-button>
           </el-form>
@@ -48,7 +48,7 @@
                 :max="100"
                 controls-position="right"
               />
-              %
+              <span class="unit-suffix">%</span>
             </el-form-item>
             <el-form-item label="普通国道 MQI 优良路率 ≥">
               <el-input-number
@@ -57,7 +57,7 @@
                 :max="100"
                 controls-position="right"
               />
-              %
+              <span class="unit-suffix">%</span>
             </el-form-item>
             <el-form-item label="普通省道 MQI 优良路率 ≥">
               <el-input-number
@@ -66,7 +66,7 @@
                 :max="100"
                 controls-position="right"
               />
-              %
+              <span class="unit-suffix">%</span>
             </el-form-item>
             <el-form-item label="农村公路 MQI 优良中等路率 ≥">
               <el-input-number
@@ -75,7 +75,7 @@
                 :max="100"
                 controls-position="right"
               />
-              %
+              <span class="unit-suffix">%</span>
             </el-form-item>
             <el-button type="primary" @click="saveProvinceSettings">保存设置</el-button>
           </el-form>
@@ -100,16 +100,16 @@
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
               <el-form-item label="路面技术状况(PQI)优等路率 ≥">
                 <el-input-number
-                  v-model="nationalData.poiExcellent"
+                  v-model="nationalData.pqiExcellent"
                   :min="0"
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
               <el-form-item label="一、二类桥梁比例 ≥">
                 <el-input-number
@@ -118,7 +118,7 @@
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
               <el-form-item label="沥青路面材料循环利用率 ≥">
                 <el-input-number
@@ -127,7 +127,7 @@
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
 
               <h4 class="subsection">普通国道指标</h4>
@@ -160,21 +160,21 @@
                 <div class="region-inputs">
                   <span>东</span>
                   <el-input-number
-                    v-model="nationalData.nationalPoi.east"
+                    v-model="nationalData.nationalPqi.east"
                     :min="0"
                     :max="100"
                     controls-position="right"
                   />
                   <span>中</span>
                   <el-input-number
-                    v-model="nationalData.nationalPoi.central"
+                    v-model="nationalData.nationalPqi.central"
                     :min="0"
                     :max="100"
                     controls-position="right"
                   />
                   <span>西</span>
                   <el-input-number
-                    v-model="nationalData.nationalPoi.west"
+                    v-model="nationalData.nationalPqi.west"
                     :min="0"
                     :max="100"
                     controls-position="right"
@@ -212,21 +212,21 @@
                 <div class="region-inputs">
                   <span>东</span>
                   <el-input-number
-                    v-model="nationalData.provincialPoi.east"
+                    v-model="nationalData.provincialPqi.east"
                     :min="0"
                     :max="100"
                     controls-position="right"
                   />
                   <span>中</span>
                   <el-input-number
-                    v-model="nationalData.provincialPoi.central"
+                    v-model="nationalData.provincialPqi.central"
                     :min="0"
                     :max="100"
                     controls-position="right"
                   />
                   <span>西</span>
                   <el-input-number
-                    v-model="nationalData.provincialPoi.west"
+                    v-model="nationalData.provincialPqi.west"
                     :min="0"
                     :max="100"
                     controls-position="right"
@@ -242,7 +242,7 @@
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
               <el-form-item label="年均养护工程实施比例 ≥">
                 <el-input-number
@@ -251,7 +251,7 @@
                   :max="100"
                   controls-position="right"
                 />
-                %
+                <span class="unit-suffix">%</span>
               </el-form-item>
 
               <el-button type="primary" @click="saveNationalSettings">保存设置</el-button>
@@ -277,20 +277,20 @@ export default {
       provinceYear: currentYear,
       nationalPlan: '十四五',
       provinceData: {
-        expressway: 90,
-        nationalHighway: 85,
-        provincialHighway: 80,
-        ruralRoad: 85
+        expressway: 92,
+        nationalHighway: 99,
+        provincialHighway: 85,
+        ruralRoad: 90
       },
       nationalData: {
         mqiExcellent: 90,
-        poiExcellent: 88,
+        pqiExcellent: 88,
         bridgeRate: 95,
         recycleRate: 95,
         nationalMqi: { east: 90, central: 85, west: 80 },
-        nationalPoi: { east: 88, central: 80, west: 75 },
+        nationalPqi: { east: 88, central: 80, west: 72 },
         provincialMqi: { east: 85, central: 80, west: 72 },
-        provincialPoi: { east: 80, central: 75, west: 70 },
+        provincialPqi: { east: 80, central: 75, west: 70 },
         ruralMqi: 85,
         maintenanceRate: 5
       },
@@ -321,13 +321,13 @@ export default {
         this.provinceData = response.data
       } catch (error) {
         if (error.response?.status === 404) {
-          this.$message.warning(`未找到${this.provinceYear}年省厅配置，将使用默认值`)
+          // this.$message.warning(`未找到${this.provinceYear}年省厅配置，将使用默认值`)
           // Reset to default if not found, or handle as per your app's logic
           this.provinceData = {
-            expressway: 90,
-            nationalHighway: 85,
-            provincialHighway: 80,
-            ruralRoad: 85
+            expressway: 92,
+            nationalHighway: 99,
+            provincialHighway: 85,
+            ruralRoad: 90
           }
         } else {
           this.$message.error('加载省厅配置失败')
@@ -340,17 +340,17 @@ export default {
         this.nationalData = this.transformNationalData(response.data)
       } catch (error) {
         if (error.response?.status === 404) {
-          this.$message.warning(`未找到${this.nationalPlan}规划交通部配置，将使用默认值`)
+          // this.$message.warning(`未找到${this.nationalPlan}规划交通部配置，将使用默认值`)
           // Reset to default if not found
           this.nationalData = {
             mqiExcellent: 90,
-            poiExcellent: 88,
+            pqiExcellent: 88,
             bridgeRate: 95,
             recycleRate: 95,
             nationalMqi: { east: 90, central: 85, west: 80 },
-            nationalPoi: { east: 88, central: 80, west: 75 },
+            nationalPqi: { east: 88, central: 80, west: 72 },
             provincialMqi: { east: 85, central: 80, west: 72 },
-            provincialPoi: { east: 80, central: 75, west: 70 },
+            provincialPqi: { east: 80, central: 75, west: 70 },
             ruralMqi: 85,
             maintenanceRate: 5
           }
@@ -362,7 +362,7 @@ export default {
     // New method to load calculation settings
     async loadCalculationSettings() {
       try {
-        // Assuming a general endpoint for these settings, not tied to year or plan
+        // Assuming a general endpqint for these settings, not tied to year or plan
         const response = await this.$axios.get(`/api/settings/calculation`)
         if (response.data) {
           this.calculationData = response.data
@@ -383,7 +383,7 @@ export default {
       if (!data) return {}
       return {
         mqiExcellent: data.mqiExcellent,
-        poiExcellent: data.poiExcellent,
+        pqiExcellent: data.pqiExcellent,
         bridgeRate: data.bridgeRate,
         recycleRate: data.recycleRate,
         nationalMqi: {
@@ -391,20 +391,20 @@ export default {
           central: data.nationalMqiCentral,
           west: data.nationalMqiWest
         },
-        nationalPoi: {
-          east: data.nationalPoiEast,
-          central: data.nationalPoiCentral,
-          west: data.nationalPoiWest
+        nationalPqi: {
+          east: data.nationalPqiEast,
+          central: data.nationalPqiCentral,
+          west: data.nationalPqiWest
         },
         provincialMqi: {
           east: data.provincialMqiEast,
           central: data.provincialMqiCentral,
           west: data.provincialMqiWest
         },
-        provincialPoi: {
-          east: data.provincialPoiEast,
-          central: data.provincialPoiCentral,
-          west: data.provincialPoiWest
+        provincialPqi: {
+          east: data.provincialPqiEast,
+          central: data.provincialPqiCentral,
+          west: data.provincialPqiWest
         },
         ruralMqi: data.ruralMqi,
         maintenanceRate: data.maintenanceRate
@@ -436,21 +436,21 @@ export default {
         const dataToSave = {
           plan: this.nationalPlan,
           mqiExcellent: this.nationalData.mqiExcellent,
-          poiExcellent: this.nationalData.poiExcellent,
+          pqiExcellent: this.nationalData.pqiExcellent,
           bridgeRate: this.nationalData.bridgeRate,
           recycleRate: this.nationalData.recycleRate,
           nationalMqiEast: this.nationalData.nationalMqi.east,
           nationalMqiCentral: this.nationalData.nationalMqi.central,
           nationalMqiWest: this.nationalData.nationalMqi.west,
-          nationalPoiEast: this.nationalData.nationalPoi.east,
-          nationalPoiCentral: this.nationalData.nationalPoi.central,
-          nationalPoiWest: this.nationalData.nationalPoi.west,
+          nationalPqiEast: this.nationalData.nationalPqi.east,
+          nationalPqiCentral: this.nationalData.nationalPqi.central,
+          nationalPqiWest: this.nationalData.nationalPqi.west,
           provincialMqiEast: this.nationalData.provincialMqi.east,
           provincialMqiCentral: this.nationalData.provincialMqi.central,
           provincialMqiWest: this.nationalData.provincialMqi.west,
-          provincialPoiEast: this.nationalData.provincialPoi.east,
-          provincialPoiCentral: this.nationalData.provincialPoi.central,
-          provincialPoiWest: this.nationalData.provincialPoi.west,
+          provincialPqiEast: this.nationalData.provincialPqi.east,
+          provincialPqiCentral: this.nationalData.provincialPqi.central,
+          provincialPqiWest: this.nationalData.provincialPqi.west,
           ruralMqi: this.nationalData.ruralMqi,
           maintenanceRate: this.nationalData.maintenanceRate
         }
@@ -556,27 +556,24 @@ export default {
 
 .region-inputs {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   align-items: center;
 }
 
 .region-inputs span {
-  width: 30px; /* Keep this if it's for specific alignment, or adjust if needed */
-  text-align: right; /* This might be overridden by form's label-position: left for the main label, but good for these inner spans */
+  width: auto;
+  text-align: left;
 }
 
-/* Apply width consistently to input numbers if needed */
 ::v-deep .el-input-number {
   width: 90px !important;
 }
 
 .region-inputs .el-input-number {
-  /* Specificity for region inputs if different width is ever needed */
   width: 90px !important;
 }
 
-/* Adjust el-form-item label style if needed, though label-position="left" should handle main alignment */
-::v-deep .el-form-item__label {
-  /* text-align: left !important; */ /* Usually not needed if label-position="left" is set on el-form */
+.unit-suffix {
+  margin-left: 6px;
 }
 </style>

@@ -17,7 +17,7 @@
         :formatter="formatDate"
       ></el-table-column>
       <el-table-column #default="scope" width="250" label="操作">
-        <el-button type="primary" link @click="handleView(scope.row)">查看</el-button>
+        <el-button type="primary" link @click="handleView(scope.row)">预览</el-button>
         <el-button type="primary" link @click="prepareDownload(scope.row, 'download')"
           >下载
         </el-button>
