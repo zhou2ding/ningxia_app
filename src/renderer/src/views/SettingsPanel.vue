@@ -273,9 +273,35 @@ export default {
   },
   data() {
     const currentYear = new Date().getFullYear()
+    const nationalPlanPeriods = {
+      十四五: { start: 2021, end: 2025 },
+      十五五: { start: 2026, end: 2030 },
+      十六五: { start: 2031, end: 2035 },
+      十七五: { start: 2036, end: 2040 },
+      十八五: { start: 2041, end: 2045 }
+    }
+    const availablePlanOptions = ['十四五', '十五五', '十六五', '十七五', '十八五']
+    let currentNationalPlan = availablePlanOptions[0]
+    for (const planName of availablePlanOptions) {
+      const period = nationalPlanPeriods[planName]
+      if (period && currentYear >= period.start && currentYear <= period.end) {
+        currentNationalPlan = planName
+        break // 找到匹配的规划后即停止
+      }
+    }
+    if (currentYear < nationalPlanPeriods[availablePlanOptions[0]].start) {
+      currentNationalPlan = availablePlanOptions[0]
+    } else if (
+      currentYear > nationalPlanPeriods[availablePlanOptions[availablePlanOptions.length - 1]].end
+    ) {
+      const lastPlanNameInOptions = availablePlanOptions[availablePlanOptions.length - 1]
+      if (currentYear > nationalPlanPeriods[lastPlanNameInOptions].end) {
+        currentNationalPlan = lastPlanNameInOptions
+      }
+    }
     return {
       provinceYear: currentYear,
-      nationalPlan: '十四五',
+      nationalPlan: currentNationalPlan,
       provinceData: {
         expressway: 92,
         nationalHighway: 99,
@@ -296,10 +322,10 @@ export default {
       },
       // New data property for the "计算指标" tab
       calculationData: {
-        pqiIndicator: 75, // Default value, assuming percentage
-        totalMileage: 1000 // Default value in km
+        pqiIndicator: 0, // Default value, assuming percentage
+        totalMileage: 0 // Default value in km
       },
-      yearOptions: Array.from({ length: 10 }, (_, i) => currentYear + i),
+      yearOptions: Array.from({ length: 21 }, (_, i) => currentYear + i),
       planOptions: ['十四五', '十五五', '十六五', '十七五', '十八五']
     }
   },

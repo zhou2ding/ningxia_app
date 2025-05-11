@@ -104,31 +104,6 @@
           </el-select>
         </el-form-item>
 
-        <!--        <el-form-item label="管养单位" prop="managementUnit">-->
-        <!--          <el-select-->
-        <!--            v-model="uploadForm.managementUnit"-->
-        <!--            placeholder="请选择管养单位"-->
-        <!--            class="form-input"-->
-        <!--            clearable-->
-        <!--            :disabled="!uploadForm.reportType"-->
-        <!--          >-->
-        <!--            <template v-for="unit in currentManagementUnits" :key="unit.value || unit.label">-->
-        <!--              <el-option v-if="unit.value" :label="unit.label" :value="unit.value" />-->
-        <!--              <el-option-group-->
-        <!--                v-if="unit.children && unit.children.length"-->
-        <!--                :label="unit.label + ' - 下属单位'"-->
-        <!--              >-->
-        <!--                <el-option-->
-        <!--                  v-for="childItem in unit.children"-->
-        <!--                  :key="childItem.value"-->
-        <!--                  :label="childItem.label"-->
-        <!--                  :value="childItem.value"-->
-        <!--                />-->
-        <!--              </el-option-group>-->
-        <!--            </template>-->
-        <!--          </el-select>-->
-        <!--        </el-form-item>-->
-
         <el-form-item :label="uploadZipLabel" prop="zipFile">
           <div class="file-upload-container">
             <el-upload
