@@ -9,7 +9,7 @@
 <style scoped>
 .header {
   width: 100%;
-  height: 100px;
+  height: 90px;
   background-image: url('../../assets/images/header.png');
   background-size: cover;
   background-position: center;

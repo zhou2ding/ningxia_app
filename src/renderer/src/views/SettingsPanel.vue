@@ -7,7 +7,30 @@
       <div class="rect lb"></div>
       <div class="rect rb"></div>
       <el-tabs type="border-card">
-        <!-- 省厅指标 -->
+        <el-tab-pane label="计算指标">
+          <h3 class="section-title">计算参数配置</h3>
+          <el-form label-width="220px" label-position="left">
+            <el-form-item label="PQI指标 ≥">
+              <el-input-number
+                v-model="calculationData.pqiIndicator"
+                :min="0"
+                :max="100"
+                controls-position="right"
+              />
+              %
+            </el-form-item>
+            <el-form-item label="总里程">
+              <el-input-number
+                v-model="calculationData.totalMileage"
+                :min="0"
+                controls-position="right"
+              />
+              km
+            </el-form-item>
+            <el-button type="primary" @click="saveCalculationSettings">保存设置</el-button>
+          </el-form>
+        </el-tab-pane>
+
         <el-tab-pane label="省厅指标">
           <h3 class="section-title">
             交通厅
@@ -17,7 +40,7 @@
             公路养护考核指标
           </h3>
 
-          <el-form label-width="220px" label-position="right">
+          <el-form label-width="220px" label-position="left">
             <el-form-item label="高速公路 MQI 优等路率 ≥">
               <el-input-number
                 v-model="provinceData.expressway"
@@ -58,7 +81,6 @@
           </el-form>
         </el-tab-pane>
 
-        <!-- 交通部指标 -->
         <el-tab-pane label="交通部指标">
           <div class="national-form-wrapper">
             <h3 class="section-title">
@@ -69,8 +91,7 @@
               养护发展纲要要求
             </h3>
 
-            <el-form label-width="220px" label-position="right">
-              <!-- 高速公路部分 -->
+            <el-form label-width="220px" label-position="left">
               <h4 class="subsection">高速公路指标</h4>
               <el-form-item label="技术状况(MQI)优等路率 ≥">
                 <el-input-number
@@ -109,7 +130,6 @@
                 %
               </el-form-item>
 
-              <!-- 普通国道部分 -->
               <h4 class="subsection">普通国道指标</h4>
               <el-form-item label="MQI 优良路率 ≥">
                 <div class="region-inputs">
@@ -162,7 +182,6 @@
                 </div>
               </el-form-item>
 
-              <!-- 普通省道部分 -->
               <h4 class="subsection">普通省道指标</h4>
               <el-form-item label="MQI 优良路率 ≥">
                 <div class="region-inputs">
@@ -215,7 +234,6 @@
                 </div>
               </el-form-item>
 
-              <!-- 农村公路 -->
               <h4 class="subsection">农村公路指标</h4>
               <el-form-item label="MQI 优良中等路率 ≥">
                 <el-input-number
@@ -276,6 +294,11 @@ export default {
         ruralMqi: 85,
         maintenanceRate: 5
       },
+      // New data property for the "计算指标" tab
+      calculationData: {
+        pqiIndicator: 75, // Default value, assuming percentage
+        totalMileage: 1000 // Default value in km
+      },
       yearOptions: Array.from({ length: 10 }, (_, i) => currentYear + i),
       planOptions: ['十四五', '十五五', '十六五', '十七五', '十八五']
     }
@@ -283,11 +306,13 @@ export default {
   watch: {
     provinceYear: 'loadProvinceSettings',
     nationalPlan: 'loadNationalSettings'
+    // No watcher needed for calculationData unless it depends on year/plan
   },
   async mounted() {
     await this.loadProvinceSettings()
     await this.loadNationalSettings()
-    this.$forceUpdate()
+    await this.loadCalculationSettings() // Load settings for the new tab
+    this.$forceUpdate() // You might not need this if Vue's reactivity handles updates correctly
   },
   methods: {
     async loadProvinceSettings() {
@@ -296,7 +321,14 @@ export default {
         this.provinceData = response.data
       } catch (error) {
         if (error.response?.status === 404) {
-          this.$message.warning(`未找到${this.provinceYear}年配置，将使用默认值`)
+          this.$message.warning(`未找到${this.provinceYear}年省厅配置，将使用默认值`)
+          // Reset to default if not found, or handle as per your app's logic
+          this.provinceData = {
+            expressway: 90,
+            nationalHighway: 85,
+            provincialHighway: 80,
+            ruralRoad: 85
+          }
         } else {
           this.$message.error('加载省厅配置失败')
         }
@@ -308,13 +340,47 @@ export default {
         this.nationalData = this.transformNationalData(response.data)
       } catch (error) {
         if (error.response?.status === 404) {
-          this.$message.warning(`未找到${this.nationalPlan}规划配置，将使用默认值`)
+          this.$message.warning(`未找到${this.nationalPlan}规划交通部配置，将使用默认值`)
+          // Reset to default if not found
+          this.nationalData = {
+            mqiExcellent: 90,
+            poiExcellent: 88,
+            bridgeRate: 95,
+            recycleRate: 95,
+            nationalMqi: { east: 90, central: 85, west: 80 },
+            nationalPoi: { east: 88, central: 80, west: 75 },
+            provincialMqi: { east: 85, central: 80, west: 72 },
+            provincialPoi: { east: 80, central: 75, west: 70 },
+            ruralMqi: 85,
+            maintenanceRate: 5
+          }
         } else {
           this.$message.error('加载交通部配置失败')
         }
       }
     },
+    // New method to load calculation settings
+    async loadCalculationSettings() {
+      try {
+        // Assuming a general endpoint for these settings, not tied to year or plan
+        const response = await this.$axios.get(`/api/settings/calculation`)
+        if (response.data) {
+          this.calculationData = response.data
+        } else {
+          this.$message.warning(`计算指标配置为空，将使用默认值`)
+          this.calculationData = { pqiIndicator: 75, totalMileage: 1000 }
+        }
+      } catch (error) {
+        if (error.response?.status === 404) {
+          this.calculationData = { pqiIndicator: 0, totalMileage: 0 }
+        } else {
+          this.$message.error('加载计算指标配置失败')
+        }
+      }
+    },
     transformNationalData(data) {
+      // Basic check to prevent errors if data is not as expected
+      if (!data) return {}
       return {
         mqiExcellent: data.mqiExcellent,
         poiExcellent: data.poiExcellent,
@@ -354,7 +420,7 @@ export default {
       } catch (error) {
         let errorMessage = '未知错误'
         if (error.response) {
-          if (error.response.data.error) {
+          if (error.response.data && error.response.data.error) {
             errorMessage = error.response.data.error
           } else {
             errorMessage = `服务器错误（${error.response.status})`
@@ -362,20 +428,38 @@ export default {
         } else {
           errorMessage = '网络连接失败'
         }
-        this.$message.error(errorMessage)
+        this.$message.error(`省厅指标保存失败: ${errorMessage}`)
       }
     },
     async saveNationalSettings() {
       try {
-        await this.$axios.post('/api/settings/national', {
+        const dataToSave = {
           plan: this.nationalPlan,
-          ...this.nationalData
-        })
+          mqiExcellent: this.nationalData.mqiExcellent,
+          poiExcellent: this.nationalData.poiExcellent,
+          bridgeRate: this.nationalData.bridgeRate,
+          recycleRate: this.nationalData.recycleRate,
+          nationalMqiEast: this.nationalData.nationalMqi.east,
+          nationalMqiCentral: this.nationalData.nationalMqi.central,
+          nationalMqiWest: this.nationalData.nationalMqi.west,
+          nationalPoiEast: this.nationalData.nationalPoi.east,
+          nationalPoiCentral: this.nationalData.nationalPoi.central,
+          nationalPoiWest: this.nationalData.nationalPoi.west,
+          provincialMqiEast: this.nationalData.provincialMqi.east,
+          provincialMqiCentral: this.nationalData.provincialMqi.central,
+          provincialMqiWest: this.nationalData.provincialMqi.west,
+          provincialPoiEast: this.nationalData.provincialPoi.east,
+          provincialPoiCentral: this.nationalData.provincialPoi.central,
+          provincialPoiWest: this.nationalData.provincialPoi.west,
+          ruralMqi: this.nationalData.ruralMqi,
+          maintenanceRate: this.nationalData.maintenanceRate
+        }
+        await this.$axios.post('/api/settings/national', dataToSave)
         this.$message.success('交通部指标保存成功')
       } catch (error) {
         let errorMessage = '未知错误'
         if (error.response) {
-          if (error.response.data.error) {
+          if (error.response.data && error.response.data.error) {
             errorMessage = error.response.data.error
           } else {
             errorMessage = `服务器错误（${error.response.status})`
@@ -383,7 +467,26 @@ export default {
         } else {
           errorMessage = '网络连接失败'
         }
-        this.$message.error(errorMessage)
+        this.$message.error(`交通部指标保存失败: ${errorMessage}`)
+      }
+    },
+    // New method to save calculation settings
+    async saveCalculationSettings() {
+      try {
+        await this.$axios.post('/api/settings/calculation', this.calculationData)
+        this.$message.success('计算指标保存成功')
+      } catch (error) {
+        let errorMessage = '未知错误'
+        if (error.response) {
+          if (error.response.data && error.response.data.error) {
+            errorMessage = error.response.data.error
+          } else {
+            errorMessage = `服务器错误（${error.response.status})`
+          }
+        } else {
+          errorMessage = '网络连接失败'
+        }
+        this.$message.error(`计算指标保存失败: ${errorMessage}`)
       }
     }
   }
@@ -392,7 +495,7 @@ export default {
 
 <style scoped>
 .settings-panel {
-  margin: 20px auto 0;
+  margin: 0 auto 0;
   width: 700px;
   position: relative;
   padding: 1px;
@@ -432,10 +535,10 @@ export default {
 }
 
 .national-form-wrapper {
-  max-height: 68vh;
+  max-height: 78vh; /* Consider if other tabs might need this if they grow */
   overflow-y: auto;
-  padding-right: 15px;
-  margin-right: -15px;
+  padding-right: 15px; /* For scrollbar */
+  margin-right: -15px; /* To counteract padding if scrollbar appears */
 }
 
 .section-title {
@@ -458,15 +561,22 @@ export default {
 }
 
 .region-inputs span {
-  width: 30px;
-  text-align: right;
+  width: 30px; /* Keep this if it's for specific alignment, or adjust if needed */
+  text-align: right; /* This might be overridden by form's label-position: left for the main label, but good for these inner spans */
 }
 
+/* Apply width consistently to input numbers if needed */
 ::v-deep .el-input-number {
   width: 90px !important;
 }
 
 .region-inputs .el-input-number {
+  /* Specificity for region inputs if different width is ever needed */
   width: 90px !important;
+}
+
+/* Adjust el-form-item label style if needed, though label-position="left" should handle main alignment */
+::v-deep .el-form-item__label {
+  /* text-align: left !important; */ /* Usually not needed if label-position="left" is set on el-form */
 }
 </style>
