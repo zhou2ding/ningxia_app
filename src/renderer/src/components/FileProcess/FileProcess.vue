@@ -149,7 +149,7 @@
             >
               <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
               <el-tooltip
-                content="请上传“管养单位明细.xlsx” (仅支持.xlsx, .xls格式)"
+                content="请上传“管养单位明细表” (仅支持.xlsx, .xls格式)"
                 placement="right"
                 effect="light"
               >
@@ -187,7 +187,7 @@
             >
               <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
               <el-tooltip
-                content="请上传“单位层级明细.xlsx” (仅支持.xlsx, .xls格式)"
+                content="请上传“单位层级明细表” (仅支持.xlsx, .xls格式)"
                 placement="right"
                 effect="light"
               >
@@ -225,7 +225,7 @@
             >
               <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
               <el-tooltip
-                content="请上传“路况技术评定.xlsx” (仅支持.xlsx, .xls格式)"
+                content="请上传“路况技术评定表” (仅支持.xlsx, .xls格式)"
                 placement="right"
                 effect="light"
               >
