@@ -43,17 +43,17 @@
     <el-dialog
       v-model="uploadDialogVisible"
       :title="uploadDialogTitle"
-      width="750px"
+      width="700px"
       :before-close="handleDialogClose"
     >
-      <el-form :model="uploadForm" label-width="160px">
+      <el-form :model="uploadForm" label-width="210px" ref="uploadFormRef">
         <el-form-item label="报告类型" prop="reportType">
           <el-select
             v-model="uploadForm.reportType"
             placeholder="请选择报告类型"
             class="form-input"
             clearable
-            @change="uploadForm.managementUnit = ''"
+            @change="handleReportTypeChange"
           >
             <el-option
               v-for="item in reportTypes"
@@ -65,192 +65,383 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="管养单位" prop="managementUnit">
-          <el-select
-            v-model="uploadForm.managementUnit"
-            placeholder="请选择管养单位"
-            class="form-input"
-            clearable
-            :disabled="!uploadForm.reportType"
-          >
-            <template v-for="unit in currentManagementUnits" :key="unit.value || unit.label">
-              <el-option
-                v-if="unit.value"
-                :label="unit.label"
-                :value="unit.value"
-              >
-                <span>{{ unit.label }}</span>
-                <span
-                  v-if="unit.children && unit.children.length"
-                  style="color: #909399; font-size: 0.9em; margin-left: 8px"
-                  >(市级)</span
-                >
-              </el-option>
-
-              <el-option-group
-                v-if="unit.children && unit.children.length"
-                :label="unit.label + ' - 下属单位'"
-              >
+        <template v-if="isStandardRoadType">
+          <el-form-item label="管养单位" prop="managementUnit">
+            <el-select
+              v-model="uploadForm.managementUnit"
+              placeholder="请选择管养单位"
+              class="form-input"
+              clearable
+              :disabled="!uploadForm.reportType"
+            >
+              <template v-for="unit in currentManagementUnits" :key="unit.value || unit.label">
                 <el-option
-                  v-for="childItem in unit.children"
-                  :key="childItem.value"
-                  :label="childItem.label"
-                  :value="childItem.value"
+                  v-if="unit.value && (!unit.children || unit.children.length === 0)"
+                  :label="unit.label"
+                  :value="unit.value"
                 >
-                  <span style="padding-left: 20px">{{ childItem.label }}</span>
+                  <span>{{ unit.label }}</span>
                 </el-option>
-              </el-option-group>
-            </template>
-          </el-select>
-        </el-form-item>
+                <el-option
+                  v-if="unit.value && unit.children && unit.children.length"
+                  :label="unit.label"
+                  :value="unit.value"
+                >
+                  <span>{{ unit.label }}</span>
+                  <span style="color: #909399; font-size: 0.9em; margin-left: 8px">(市级)</span>
+                </el-option>
+                <el-option-group
+                  v-if="unit.children && unit.children.length"
+                  :label="unit.label + ' - 下属单位'"
+                >
+                  <el-option
+                    v-for="childItem in unit.children"
+                    :key="childItem.value"
+                    :label="childItem.label"
+                    :value="childItem.value"
+                  >
+                    <span style="padding-left: 20px">{{ childItem.label }}</span>
+                  </el-option>
+                </el-option-group>
+              </template>
+            </el-select>
+          </el-form-item>
 
-        <el-form-item :label="uploadZipLabel" prop="zipFile">
-          <div class="file-upload-container">
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="handleZipFileChange"
-              :show-file-list="false"
-              accept=".zip"
-            >
-              <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
-              <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
-                <el-icon class="hint-icon">
-                  <QuestionFilled />
-                </el-icon>
-              </el-tooltip>
-            </el-upload>
-            <div v-if="uploadForm.zipFile" class="file-card">
-              <div class="file-info">
-                <el-icon class="file-icon">
-                  <Document />
-                </el-icon>
-                <span class="file-name">{{ uploadForm.zipFile.name }}</span>
-              </div>
-              <el-button
-                type="danger"
-                :icon="Delete"
-                circle
-                size="small"
-                @click="removeSelectedZipFile"
-              />
-            </div>
-          </div>
-        </el-form-item>
-
-        <el-form-item label="管养单位明细" prop="managementDetailFile">
-          <div class="file-upload-container">
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="(file) => handleExcelFileChange(file, 'managementDetailFile')"
-              :show-file-list="false"
-              accept=".xlsx, .xls"
-            >
-              <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
-              <el-tooltip
-                content="请上传“管养单位明细表” (仅支持.xlsx, .xls格式)"
-                placement="right"
-                effect="light"
+          <el-form-item label="三位多功能路况快速检测车数据" prop="threeDimensionalDataZip">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleZipFileChange(file, 'threeDimensionalDataZip')"
+                :show-file-list="false"
+                accept=".zip"
               >
-                <el-icon class="hint-icon">
-                  <QuestionFilled />
-                </el-icon>
-              </el-tooltip>
-            </el-upload>
-            <div v-if="uploadForm.managementDetailFile" class="file-card">
-              <div class="file-info">
-                <el-icon class="file-icon">
-                  <Document />
-                </el-icon>
-                <span class="file-name">{{ uploadForm.managementDetailFile.name }}</span>
+                <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
+                <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.threeDimensionalDataZip" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.threeDimensionalDataZip.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('threeDimensionalDataZip')"
+                />
               </div>
-              <el-button
-                type="danger"
-                :icon="Delete"
-                circle
-                size="small"
-                @click="removeSelectedExcelFile('managementDetailFile')"
-              />
             </div>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <el-form-item label="单位层级明细" prop="unitLevelDetailFile">
-          <div class="file-upload-container">
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="(file) => handleExcelFileChange(file, 'unitLevelDetailFile')"
-              :show-file-list="false"
-              accept=".xlsx, .xls"
-            >
-              <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
-              <el-tooltip
-                content="请上传“单位层级明细表” (仅支持.xlsx, .xls格式)"
-                placement="right"
-                effect="light"
+          <el-form-item label="CICS车检测数据" prop="cicsDataZip">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleZipFileChange(file, 'cicsDataZip')"
+                :show-file-list="false"
+                accept=".zip"
               >
-                <el-icon class="hint-icon">
-                  <QuestionFilled />
-                </el-icon>
-              </el-tooltip>
-            </el-upload>
-            <div v-if="uploadForm.unitLevelDetailFile" class="file-card">
-              <div class="file-info">
-                <el-icon class="file-icon">
-                  <Document />
-                </el-icon>
-                <span class="file-name">{{ uploadForm.unitLevelDetailFile.name }}</span>
+                <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
+                <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.cicsDataZip" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.cicsDataZip.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('cicsDataZip')"
+                />
               </div>
-              <el-button
-                type="danger"
-                :icon="Delete"
-                circle
-                size="small"
-                @click="removeSelectedExcelFile('unitLevelDetailFile')"
-              />
             </div>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <el-form-item label="路况技术评定" prop="roadConditionFile">
-          <div class="file-upload-container">
-            <el-upload
-              action="#"
-              :auto-upload="false"
-              :on-change="(file) => handleExcelFileChange(file, 'roadConditionFile')"
-              :show-file-list="false"
-              accept=".xlsx, .xls"
-            >
-              <el-button type="primary" :icon="DocumentAdd">选择文件</el-button>
-              <el-tooltip
-                content="请上传“路况技术评定表” (仅支持.xlsx, .xls格式)"
-                placement="right"
-                effect="light"
+          <el-form-item label="管养单位明细" prop="managementDetailFile">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'managementDetailFile')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
               >
-                <el-icon class="hint-icon">
-                  <QuestionFilled />
-                </el-icon>
-              </el-tooltip>
-            </el-upload>
-            <div v-if="uploadForm.roadConditionFile" class="file-card">
-              <div class="file-info">
-                <el-icon class="file-icon">
-                  <Document />
-                </el-icon>
-                <span class="file-name">{{ uploadForm.roadConditionFile.name }}</span>
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip
+                  content="请上传“管养单位明细表” (仅支持.xlsx, .xls格式)"
+                  placement="right"
+                  effect="light"
+                >
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.managementDetailFile" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.managementDetailFile.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('managementDetailFile')"
+                />
               </div>
-              <el-button
-                type="danger"
-                :icon="Delete"
-                circle
-                size="small"
-                @click="removeSelectedExcelFile('roadConditionFile')"
-              />
             </div>
-          </div>
-        </el-form-item>
+          </el-form-item>
+
+          <el-form-item label="单位层级明细" prop="unitLevelDetailFile">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'unitLevelDetailFile')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip
+                  content="请上传“单位层级明细表” (仅支持.xlsx, .xls格式)"
+                  placement="right"
+                  effect="light"
+                >
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.unitLevelDetailFile" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.unitLevelDetailFile.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('unitLevelDetailFile')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="路况技术评定" prop="roadConditionFile">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'roadConditionFile')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip
+                  content="请上传“路况技术评定表” (仅支持.xlsx, .xls格式)"
+                  placement="right"
+                  effect="light"
+                >
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.roadConditionFile" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.roadConditionFile.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('roadConditionFile')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item
+            v-if="uploadForm.reportType === 'NATIONAL_PROVINCIAL'"
+            label="上一年病害数据"
+            prop="previousYearDiseaseZip"
+          >
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleZipFileChange(file, 'previousYearDiseaseZip')"
+                :show-file-list="false"
+                accept=".zip"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
+                <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.previousYearDiseaseZip" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.previousYearDiseaseZip.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('previousYearDiseaseZip')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+        </template>
+
+        <template v-if="isProjectType">
+          <el-form-item label="项目名称" prop="projectName">
+            <el-input
+              v-model="uploadForm.projectName"
+              placeholder="请输入项目名称"
+              class="form-input"
+              clearable
+              maxlength="100"
+              show-word-limit
+            />
+          </el-form-item>
+
+          <el-form-item label="第一次检测数据" prop="firstInspectionExcel">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'firstInspectionExcel')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip content="仅支持.xlsx, .xls格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.firstInspectionExcel" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.firstInspectionExcel.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('firstInspectionExcel')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="第二次检测数据" prop="secondInspectionExcel">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'secondInspectionExcel')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip content="仅支持.xlsx, .xls格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.secondInspectionExcel" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.secondInspectionExcel.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('secondInspectionExcel')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="病害数据" prop="diseaseDataExcel">
+            <div class="file-upload-container">
+              <el-upload
+                action="#"
+                :auto-upload="false"
+                :on-change="(file) => handleExcelFileChange(file, 'diseaseDataExcel')"
+                :show-file-list="false"
+                accept=".xlsx, .xls"
+              >
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip content="仅支持.xlsx, .xls格式文件" placement="right" effect="light">
+                  <el-icon class="hint-icon">
+                    <QuestionFilled />
+                  </el-icon>
+                </el-tooltip>
+              </el-upload>
+              <div v-if="uploadForm.diseaseDataExcel" class="file-card">
+                <div class="file-info">
+                  <el-icon class="file-icon">
+                    <Document />
+                  </el-icon>
+                  <span class="file-name">{{ uploadForm.diseaseDataExcel.name }}</span>
+                </div>
+                <el-button
+                  type="danger"
+                  :icon="Delete"
+                  circle
+                  size="small"
+                  @click="removeSelectedFile('diseaseDataExcel')"
+                />
+              </div>
+            </div>
+          </el-form-item>
+        </template>
       </el-form>
 
       <template #footer>
@@ -285,11 +476,12 @@ import {
   Document
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import service from '../../api/request' // 请确保路径正确
-import { useUploadStore } from '../../store/upload' // 请确保路径正确
-import { emit } from '../../utils/eventBus' // 请确保路径正确
+import service from '../../api/request'
+import { useUploadStore } from '../../store/upload'
+import { emit } from '../../utils/eventBus'
 
 const uploadStore = useUploadStore()
+const uploadFormRef = ref(null)
 
 const reportTypes = [
   { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY', name: '高速公路' },
@@ -303,7 +495,6 @@ const reportTypes = [
   }
 ]
 
-// 管养单位配置 - 请根据实际截图详细填充此对象
 const managementUnitsConfig = {
   EXPRESSWAY: [
     { value: '宁夏交投高速公路管理有限公司', label: '宁夏交投高速公路管理有限公司' },
@@ -374,7 +565,7 @@ const managementUnitsConfig = {
   ],
   NATIONAL_PROVINCIAL: [
     {
-      label: '宁夏公路管理中心', // 假设这是市级单位
+      label: '宁夏公路管理中心',
       value: '宁夏公路管理中心_city',
       children: [
         { value: '宁夏公路管理中心吴忠分中心', label: '宁夏公路管理中心吴忠分中心' },
@@ -384,21 +575,28 @@ const managementUnitsConfig = {
         { value: '宁夏公路管理中心石嘴山分中心', label: '宁夏公路管理中心石嘴山分中心' }
       ]
     }
-    // ... 根据截图填充市级和可能的县区级单位
   ],
-  MAINTENANCE: [], // 养护工程单位列表将动态生成
-  CONSTRUCTION: [] // 建设工程单位列表将动态生成
+  MAINTENANCE: [],
+  CONSTRUCTION: []
 }
 
-const uploadDialogVisible = ref(false)
-const uploadForm = ref({
+const initialUploadForm = () => ({
   reportType: '',
-  managementUnit: '', // 新增：管养单位
-  zipFile: null, // 修改：专门存储ZIP文件
-  managementDetailFile: null, // 新增：管养单位明细.xlsx
-  unitLevelDetailFile: null, // 新增：单位层级明细.xlsx
-  roadConditionFile: null // 新增：路况技术评定.xlsx
+  managementUnit: '',
+  threeDimensionalDataZip: null,
+  cicsDataZip: null,
+  managementDetailFile: null,
+  unitLevelDetailFile: null,
+  roadConditionFile: null,
+  previousYearDiseaseZip: null,
+  projectName: '',
+  firstInspectionExcel: null,
+  secondInspectionExcel: null,
+  diseaseDataExcel: null
 })
+
+const uploadDialogVisible = ref(false)
+const uploadForm = ref(initialUploadForm())
 
 const files = ref([])
 const selectedFiles = ref([])
@@ -430,26 +628,48 @@ const isIndeterminate = computed(() => {
   )
 })
 
+const isStandardRoadType = computed(() => {
+  const type = uploadForm.value.reportType
+  return ['EXPRESSWAY', 'RURAL', 'NATIONAL_PROVINCIAL'].includes(type)
+})
+
+const isProjectType = computed(() => {
+  const type = uploadForm.value.reportType
+  return ['MAINTENANCE', 'CONSTRUCTION'].includes(type)
+})
+
 const isFormValid = computed(() => {
-  return (
-    uploadForm.value.reportType &&
-    uploadForm.value.managementUnit && // 校验管养单位
-    uploadForm.value.zipFile &&
-    uploadForm.value.managementDetailFile &&
-    uploadForm.value.unitLevelDetailFile &&
-    uploadForm.value.roadConditionFile
-  )
+  const form = uploadForm.value
+  if (!form.reportType) return false
+
+  if (isStandardRoadType.value) {
+    const commonValid =
+      form.managementUnit &&
+      form.threeDimensionalDataZip &&
+      form.cicsDataZip &&
+      form.managementDetailFile &&
+      form.unitLevelDetailFile &&
+      form.roadConditionFile
+    if (form.reportType === 'NATIONAL_PROVINCIAL') {
+      return commonValid && form.previousYearDiseaseZip
+    }
+    return commonValid
+  }
+
+  if (isProjectType.value) {
+    return (
+      form.projectName &&
+      form.projectName.length > 0 &&
+      form.projectName.length <= 100 &&
+      form.firstInspectionExcel &&
+      form.secondInspectionExcel &&
+      form.diseaseDataExcel
+    )
+  }
+  return false
 })
 
 const uploadDialogTitle = computed(() => {
-  const selectedReportType = reportTypes.find((rt) => rt.value === uploadForm.value.reportType)
-  if (selectedReportType) {
-    return `上传${selectedReportType.name}数据`
-  }
-  return '上传数据'
-})
-
-const uploadZipLabel = computed(() => {
   const selectedReportType = reportTypes.find((rt) => rt.value === uploadForm.value.reportType)
   if (selectedReportType) {
     return `上传${selectedReportType.name}数据`
@@ -462,26 +682,31 @@ const currentManagementUnits = computed(() => {
   if (!type) return []
 
   if (type === 'MAINTENANCE' || type === 'CONSTRUCTION') {
-    // 合并高速和国省干线的单位，去重（简单示例，可优化）
+    // For project types, management units might be derived differently or not directly selected.
+    // Based on original logic, they try to combine Expressway and National/Provincial.
+    // However, the new requirement states "项目名称" for these types,
+    // so this list might not be directly used for selection in the form for these types.
+    // Keeping the logic for now if it's used elsewhere or as a fallback.
     const expresswayUnits = managementUnitsConfig.EXPRESSWAY || []
     const nationalProvincialUnits = managementUnitsConfig.NATIONAL_PROVINCIAL || []
-    const combined = [...expresswayUnits]
+    const combined = [...expresswayUnits.map((u) => ({ ...u, children: undefined }))] // Flatten expressway
 
     nationalProvincialUnits.forEach((npUnit) => {
       if (npUnit.children && npUnit.children.length) {
-        // 市级带区县
-        let existingCityGroup = combined.find((c) => c.label === npUnit.label && c.children)
+        let existingCityGroup = combined.find(
+          (c) => c.label === npUnit.label && c.value.endsWith('_city')
+        )
         if (existingCityGroup) {
+          if (!existingCityGroup.children) existingCityGroup.children = []
           npUnit.children.forEach((child) => {
             if (!existingCityGroup.children.find((cChild) => cChild.value === child.value)) {
               existingCityGroup.children.push(child)
             }
           })
         } else {
-          combined.push(JSON.parse(JSON.stringify(npUnit))) // 深拷贝
+          combined.push(JSON.parse(JSON.stringify(npUnit)))
         }
       } else {
-        // 只有一项或本身就是子项（非分组）
         if (!combined.find((c) => c.value === npUnit.value)) {
           combined.push(npUnit)
         }
@@ -492,15 +717,12 @@ const currentManagementUnits = computed(() => {
   return managementUnitsConfig[type] || []
 })
 
-const removeSelectedZipFile = () => {
-  uploadForm.value.zipFile = null
-}
-
-const removeSelectedExcelFile = (fileTypeKey) => {
-  uploadForm.value[fileTypeKey] = null
+const removeSelectedFile = (fileKey) => {
+  uploadForm.value[fileKey] = null
 }
 
 const showUploadDialog = () => {
+  resetUploadForm()
   uploadDialogVisible.value = true
 }
 
@@ -513,33 +735,64 @@ const handleDialogClose = (done) => {
   done()
 }
 
-const handleZipFileChange = (file) => {
+const handleReportTypeChange = () => {
+  // Reset fields that depend on report type
+  uploadForm.value.managementUnit = ''
+  uploadForm.value.threeDimensionalDataZip = null
+  uploadForm.value.cicsDataZip = null
+  uploadForm.value.managementDetailFile = null
+  uploadForm.value.unitLevelDetailFile = null
+  uploadForm.value.roadConditionFile = null
+  uploadForm.value.previousYearDiseaseZip = null
+  uploadForm.value.projectName = ''
+  uploadForm.value.firstInspectionExcel = null
+  uploadForm.value.secondInspectionExcel = null
+  uploadForm.value.diseaseDataExcel = null
+
+  // If form ref is available, clear validation for the entire form
+  if (uploadFormRef.value) {
+    uploadFormRef.value.clearValidate()
+  }
+}
+
+const handleZipFileChange = (file, fileTypeKey) => {
   if (file.raw.type !== 'application/zip' && !file.raw.name.endsWith('.zip')) {
     ElMessage.error('仅支持ZIP格式文件')
-    uploadForm.value.zipFile = null // 清空错误文件
+    uploadForm.value[fileTypeKey] = null
+    // Manually clear validation for this specific field if possible or re-validate
+    if (uploadFormRef.value) {
+      uploadFormRef.value.clearValidate(fileTypeKey)
+    }
     return false
   }
-  uploadForm.value.zipFile = file.raw
+  uploadForm.value[fileTypeKey] = file.raw
+  if (uploadFormRef.value) {
+    // Trigger validation after successful selection
+    uploadFormRef.value.validateField(fileTypeKey)
+  }
 }
 
 const handleExcelFileChange = (file, fileTypeKey) => {
   const fileName = file.raw.name.toLowerCase()
   if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
     ElMessage.error('仅支持Excel格式文件 (.xlsx, .xls)')
-    uploadForm.value[fileTypeKey] = null // 清空错误文件
+    uploadForm.value[fileTypeKey] = null
+    if (uploadFormRef.value) {
+      uploadFormRef.value.clearValidate(fileTypeKey)
+    }
     return false
   }
   uploadForm.value[fileTypeKey] = file.raw
+  if (uploadFormRef.value) {
+    // Trigger validation
+    uploadFormRef.value.validateField(fileTypeKey)
+  }
 }
 
 const resetUploadForm = () => {
-  uploadForm.value = {
-    reportType: '',
-    managementUnit: '',
-    zipFile: null,
-    managementDetailFile: null,
-    unitLevelDetailFile: null,
-    roadConditionFile: null
+  uploadForm.value = initialUploadForm()
+  if (uploadFormRef.value) {
+    uploadFormRef.value.resetFields() // Element Plus specific method to reset form and clear validation
   }
 }
 
@@ -567,32 +820,35 @@ const handleCancelUpload = () => {
 
 const handleUploadConfirm = async () => {
   if (!isFormValid.value) {
-    ElMessage.warning('请填写完整信息并上传所有必需文件')
+    ElMessage.warning('请填写所有必填项并上传必需文件')
     return
   }
 
-  uploadStore.setFormData({
-    // 从 store 中移除 pqi 和 totalMileage
-    reportType: uploadForm.value.reportType,
-    managementUnit: uploadForm.value.managementUnit // 将管养单位也存入store，如果后续计算需要
-  })
+  const formDataPayload = new FormData()
+  formDataPayload.append('reportType', uploadForm.value.reportType)
 
-  const formData = new FormData()
-  formData.append('reportType', uploadForm.value.reportType) // 将报告类型也传给unzip接口
-  formData.append('managementUnit', uploadForm.value.managementUnit) // 将管养单位传给unzip接口
+  const storeData = { reportType: uploadForm.value.reportType }
 
-  if (uploadForm.value.zipFile) {
-    formData.append('zipFile', uploadForm.value.zipFile) // key for zip file
+  if (isStandardRoadType.value) {
+    formDataPayload.append('managementUnit', uploadForm.value.managementUnit)
+    formDataPayload.append('threeDimensionalDataZip', uploadForm.value.threeDimensionalDataZip)
+    formDataPayload.append('cicsDataZip', uploadForm.value.cicsDataZip)
+    formDataPayload.append('managementDetailFile', uploadForm.value.managementDetailFile)
+    formDataPayload.append('unitLevelDetailFile', uploadForm.value.unitLevelDetailFile)
+    formDataPayload.append('roadConditionFile', uploadForm.value.roadConditionFile)
+    if (uploadForm.value.reportType === 'NATIONAL_PROVINCIAL') {
+      formDataPayload.append('previousYearDiseaseZip', uploadForm.value.previousYearDiseaseZip)
+    }
+    storeData.managementUnit = uploadForm.value.managementUnit
+  } else if (isProjectType.value) {
+    formDataPayload.append('projectName', uploadForm.value.projectName)
+    formDataPayload.append('firstInspectionExcel', uploadForm.value.firstInspectionExcel)
+    formDataPayload.append('secondInspectionExcel', uploadForm.value.secondInspectionExcel)
+    formDataPayload.append('diseaseDataExcel', uploadForm.value.diseaseDataExcel)
+    storeData.projectName = uploadForm.value.projectName // Store project name if needed later
   }
-  if (uploadForm.value.managementDetailFile) {
-    formData.append('managementDetailFile', uploadForm.value.managementDetailFile)
-  }
-  if (uploadForm.value.unitLevelDetailFile) {
-    formData.append('unitLevelDetailFile', uploadForm.value.unitLevelDetailFile)
-  }
-  if (uploadForm.value.roadConditionFile) {
-    formData.append('roadConditionFile', uploadForm.value.roadConditionFile)
-  }
+
+  uploadStore.setFormData(storeData)
 
   isUploading.value = true
   uploadDialogVisible.value = false
@@ -606,13 +862,8 @@ const handleUploadConfirm = async () => {
   }, 300)
 
   try {
-    const res = await service.post('/api/unzip', formData, {
-      headers: {
-        // 'Content-Type': 'multipart/form-data' // Axios会自动设置
-      }
-    })
-    files.value = res.data.files // 假设unzip接口返回的是解压后的可选文件列表
-
+    const res = await service.post('/api/unzip', formDataPayload, {}) // Axios handles multipart/form-data
+    files.value = res.data.files
     progress.value = 100
     progressStatusText.value = '上传完成'
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -631,12 +882,11 @@ const handleUploadConfirm = async () => {
       errorMessage = '上传失败，网络连接问题或未知错误'
     }
     ElMessage.error(errorMessage)
-    progress.value = 0 // 上传失败，进度条归零
+    progress.value = 0
   } finally {
     clearInterval(timer)
     isUploading.value = false
-    // 上传成功后不清空表单，允许用户基于当前表单继续操作或修改
-    // 如果需要每次上传后清空，则调用 resetUploadForm()
+    // Do not reset form here to allow re-submission or modification
   }
 }
 
@@ -659,30 +909,17 @@ const handleCalculate = async () => {
     const currentTimestamp = Math.floor(Date.now() / 1000)
     const requestData = {
       files: selectedFiles.value,
-      reportType: uploadStore.reportType, // 从store获取
-      managementUnit: uploadStore.managementUnit, // 从store获取
-      // mileage: uploadStore.totalMileage, // 已移除
-      // pqi: uploadStore.pqi, // 已移除
+      reportType: uploadStore.reportType,
+      managementUnit: uploadStore.managementUnit, // This might need adjustment based on report type
+      projectName: uploadStore.projectName, // Add projectName if available
       timestamp: currentTimestamp
     }
 
-    // 注意：原代码中 docxResponse 没有被使用，如果需要请取消注释并处理
-    // const [docxResponse, mdResponse] = await Promise.all([
-    //   service.post('/api/calculate/docx', requestData),
-    //   service.post('/api/calculate/md', requestData)
-    // ]);
-    // if (docxResponse?.data?.filename && mdResponse?.data?.filename) { ... }
-
     const mdResponse = await service.post('/api/calculate/md', requestData)
-    // 假设 calculate/docx 接口暂时不需要，如果需要，请取消上方注释并调整逻辑
-    // 暂时只处理 mdResponse
-    if (mdResponse?.data?.filename) {
-      // 调整为只检查mdResponse
-      // const docxFilename = docxResponse.data.filename; // 如果有docx，取消注释
-      const mdFilename = mdResponse.data.filename
 
+    if (mdResponse?.data?.filename) {
+      const mdFilename = mdResponse.data.filename
       let storedFilenames = JSON.parse(localStorage.getItem('reportFilenames') || '[]')
-      // storedFilenames.push(docxFilename); // 如果有docx，取消注释
       storedFilenames.push(mdFilename)
       localStorage.setItem('reportFilenames', JSON.stringify(storedFilenames))
 
@@ -691,11 +928,10 @@ const handleCalculate = async () => {
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       ElMessage.success('报告已生成')
-      resetUploadForm() // 计算成功后清空表单
+      resetUploadForm()
       resetFileList()
-      uploadStore.reset() // 重置 store
+      uploadStore.reset()
     } else {
-      // 即使请求成功，但返回的数据不符合预期
       ElMessage.error('报告生成失败，服务器未返回有效文件名。')
       progress.value = 0
     }
