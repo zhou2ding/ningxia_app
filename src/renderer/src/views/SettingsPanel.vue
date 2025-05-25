@@ -8,25 +8,277 @@
       <div class="rect rb"></div>
       <el-tabs type="border-card">
         <el-tab-pane label="计算指标">
-          <h3 class="section-title">计算参数配置</h3>
-          <el-form label-width="220px" label-position="left">
-            <el-form-item label="PQI指标 ≥">
+          <h3 class="section-title">路面质量指标配置</h3>
+          <el-form label-width="310px" label-position="left">
+            <el-form-item label="公路类型">
+              <el-select v-model="calculationData.roadType" @change="loadRoadTypeDefaults">
+                <el-option label="高速公路" value="expressway"></el-option>
+                <el-option label="国省干线" value="nationalProvincial"></el-option>
+                <el-option label="农村公路" value="rural"></el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="本年度上级交通运输主管部门下达的PQI指标 ≥">
               <el-input-number
-                v-model="calculationData.pqiIndicator"
+                v-model="calculationData.pqiTarget"
                 :min="0"
                 :max="100"
                 controls-position="right"
               />
               <span class="unit-suffix">%</span>
             </el-form-item>
-            <el-form-item label="总里程">
+
+            <h4 class="subsection">公路网级沥青路面技术状况</h4>
+            <el-form-item v-if="calculationData.roadType === 'expressway'" label="高速公路PQI ≥">
               <el-input-number
-                v-model="calculationData.totalMileage"
+                v-model="calculationData.networkPQI"
                 :min="0"
+                :max="100"
                 controls-position="right"
               />
-              <span class="unit-suffix">km</span>
             </el-form-item>
+            <template v-else>
+              <h4 class="subsection road-level-title">一级及二级公路</h4>
+              <el-form-item label="PQI ≥">
+                <el-input-number
+                  v-model="calculationData.networkPQI1"
+                  :min="0"
+                  :max="100"
+                  controls-position="right"
+                />
+              </el-form-item>
+              <h4 class="subsection road-level-title">三级及四级公路</h4>
+              <el-form-item label="PQI ≥">
+                <el-input-number
+                  v-model="calculationData.networkPQI2"
+                  :min="0"
+                  :max="100"
+                  controls-position="right"
+                />
+              </el-form-item>
+            </template>
+
+            <el-form-item
+              v-if="calculationData.roadType === 'expressway'"
+              label="路面PQI技术等级为优的里程占比 ≥"
+            >
+              <el-input-number
+                v-model="calculationData.excellentRate"
+                :min="0"
+                :max="100"
+                controls-position="right"
+              />
+              <span class="unit-suffix">%</span>
+            </el-form-item>
+
+            <h4 class="subsection">基本单元指标(1000m)</h4>
+            <template v-if="calculationData.roadType === 'expressway'">
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="PQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPQI"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="PCI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPCI"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="RQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRQI"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="RDI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRDI"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="SRI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitSRI"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+            </template>
+
+            <template v-else-if="calculationData.roadType === 'nationalProvincial'">
+              <h4 class="subsection road-level-title">一级及二级公路</h4>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="PQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPQI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="PCI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPCI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="RQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRQI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="RDI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRDI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="SRI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitSRI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <h4 class="subsection road-level-title">三级及四级公路</h4>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="PQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPQI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="PCI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPCI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="RQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRQI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+            </template>
+
+            <template v-else>
+              <h4 class="subsection road-level-title">一级及二级公路</h4>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="PQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPQI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="PCI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPCI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="RQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRQI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="RDI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRDI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="SRI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitSRI1"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <h4 class="subsection road-level-title">三级及四级公路</h4>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="PQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPQI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+                <el-form-item label="PCI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitPCI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+              <div style="display: flex; gap: 20px; margin-bottom: 22px">
+                <el-form-item label="RQI ≥" style="flex: 1; margin-bottom: 0" label-width="120px">
+                  <el-input-number
+                    v-model="calculationData.unitRQI2"
+                    :min="0"
+                    :max="100"
+                    controls-position="right"
+                  />
+                </el-form-item>
+              </div>
+            </template>
+
             <el-button type="primary" @click="saveCalculationSettings">保存设置</el-button>
           </el-form>
         </el-tab-pane>
@@ -286,7 +538,7 @@ export default {
       const period = nationalPlanPeriods[planName]
       if (period && currentYear >= period.start && currentYear <= period.end) {
         currentNationalPlan = planName
-        break // 找到匹配的规划后即停止
+        break
       }
     }
     if (currentYear < nationalPlanPeriods[availablePlanOptions[0]].start) {
@@ -320,10 +572,26 @@ export default {
         ruralMqi: 85,
         maintenanceRate: 5
       },
-      // New data property for the "计算指标" tab
       calculationData: {
-        pqiIndicator: 0, // Default value, assuming percentage
-        totalMileage: 0 // Default value in km
+        roadType: 'expressway',
+        pqiTarget: 92,
+        networkPQI: 90,
+        excellentRate: 88,
+        unitPQI: 80,
+        unitPCI: 80,
+        unitRQI: 80,
+        unitRDI: 75,
+        unitSRI: 75,
+        networkPQI1: 85,
+        networkPQI2: 80,
+        unitPQI1: 75,
+        unitPCI1: 75,
+        unitRQI1: 75,
+        unitRDI1: 70,
+        unitSRI1: 70,
+        unitPQI2: 70,
+        unitPCI2: 70,
+        unitRQI2: 70
       },
       yearOptions: Array.from({ length: 21 }, (_, i) => currentYear + i),
       planOptions: ['十四五', '十五五', '十六五', '十七五', '十八五']
@@ -331,14 +599,13 @@ export default {
   },
   watch: {
     provinceYear: 'loadProvinceSettings',
-    nationalPlan: 'loadNationalSettings'
-    // No watcher needed for calculationData unless it depends on year/plan
+    nationalPlan: 'loadNationalSettings',
+    'calculationData.roadType': 'loadCalculationSettings'
   },
   async mounted() {
     await this.loadProvinceSettings()
     await this.loadNationalSettings()
-    await this.loadCalculationSettings() // Load settings for the new tab
-    this.$forceUpdate() // You might not need this if Vue's reactivity handles updates correctly
+    await this.loadCalculationSettings()
   },
   methods: {
     async loadProvinceSettings() {
@@ -347,8 +614,6 @@ export default {
         this.provinceData = response.data
       } catch (error) {
         if (error.response?.status === 404) {
-          // this.$message.warning(`未找到${this.provinceYear}年省厅配置，将使用默认值`)
-          // Reset to default if not found, or handle as per your app's logic
           this.provinceData = {
             expressway: 92,
             nationalHighway: 99,
@@ -366,8 +631,6 @@ export default {
         this.nationalData = this.transformNationalData(response.data)
       } catch (error) {
         if (error.response?.status === 404) {
-          // this.$message.warning(`未找到${this.nationalPlan}规划交通部配置，将使用默认值`)
-          // Reset to default if not found
           this.nationalData = {
             mqiExcellent: 90,
             pqiExcellent: 88,
@@ -385,27 +648,63 @@ export default {
         }
       }
     },
-    // New method to load calculation settings
     async loadCalculationSettings() {
       try {
-        // Assuming a general endpqint for these settings, not tied to year or plan
-        const response = await this.$axios.get(`/api/settings/calculation`)
+        const response = await this.$axios.get(
+          `/api/settings/calculation/${this.calculationData.roadType}`
+        )
         if (response.data) {
           this.calculationData = response.data
-        } else {
-          this.$message.warning(`计算指标配置为空，将使用默认值`)
-          this.calculationData = { pqiIndicator: 75, totalMileage: 1000 }
         }
       } catch (error) {
         if (error.response?.status === 404) {
-          this.calculationData = { pqiIndicator: 0, totalMileage: 0 }
+          this.loadRoadTypeDefaults()
         } else {
-          this.$message.error('加载计算指标配置失败')
+          this.$message.error('加载计算指标配置配置失败')
         }
       }
     },
+    loadRoadTypeDefaults() {
+      switch (this.calculationData.roadType) {
+        case 'expressway':
+          this.calculationData.pqiTarget = 92
+          this.calculationData.networkPQI = 90
+          this.calculationData.excellentRate = 88
+          this.calculationData.unitPQI = 80
+          this.calculationData.unitPCI = 80
+          this.calculationData.unitRQI = 80
+          this.calculationData.unitRDI = 75
+          this.calculationData.unitSRI = 75
+          break
+        case 'nationalProvincial':
+          this.calculationData.pqiTarget = 90.5
+          this.calculationData.networkPQI1 = 85
+          this.calculationData.networkPQI2 = 80
+          this.calculationData.unitPQI1 = 75
+          this.calculationData.unitPCI1 = 75
+          this.calculationData.unitRQI1 = 75
+          this.calculationData.unitRDI1 = 70
+          this.calculationData.unitSRI1 = 70
+          this.calculationData.unitPQI2 = 70
+          this.calculationData.unitPCI2 = 70
+          this.calculationData.unitRQI2 = 70
+          break
+        case 'rural':
+          this.calculationData.pqiTarget = 85
+          this.calculationData.networkPQI1 = 85
+          this.calculationData.networkPQI2 = 80
+          this.calculationData.unitPQI1 = 75
+          this.calculationData.unitPCI1 = 75
+          this.calculationData.unitRQI1 = 75
+          this.calculationData.unitRDI1 = 70
+          this.calculationData.unitSRI1 = 70
+          this.calculationData.unitPQI2 = 70
+          this.calculationData.unitPCI2 = 70
+          this.calculationData.unitRQI2 = 70
+          break
+      }
+    },
     transformNationalData(data) {
-      // Basic check to prevent errors if data is not as expected
       if (!data) return {}
       return {
         mqiExcellent: data.mqiExcellent,
@@ -496,7 +795,6 @@ export default {
         this.$message.error(`交通部指标保存失败: ${errorMessage}`)
       }
     },
-    // New method to save calculation settings
     async saveCalculationSettings() {
       try {
         await this.$axios.post('/api/settings/calculation', this.calculationData)
@@ -561,10 +859,10 @@ export default {
 }
 
 .national-form-wrapper {
-  max-height: 78vh; /* Consider if other tabs might need this if they grow */
+  max-height: 78vh;
   overflow-y: auto;
-  padding-right: 15px; /* For scrollbar */
-  margin-right: -15px; /* To counteract padding if scrollbar appears */
+  padding-right: 15px;
+  margin-right: -15px;
 }
 
 .section-title {
@@ -578,6 +876,15 @@ export default {
   color: #555;
   border-left: 3px solid #0079fe;
   padding-left: 10px;
+}
+
+.subsection.road-level-title {
+  margin: 15px 0 8px 0;
+  font-size: 15px;
+  color: #606266;
+  font-weight: normal;
+  border-left: 2px solid #4da8ff;
+  padding-left: 8px;
 }
 
 .region-inputs {

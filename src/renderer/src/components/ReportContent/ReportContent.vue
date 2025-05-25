@@ -209,6 +209,13 @@ onUnmounted(() => {
   off('refresh-report-list', fetchReportList)
 })
 
+// 映射表
+const ReportEn2CN = {
+  GSGX: '普通国省干线抽检路段公路技术状况监管分析报告',
+  highway: '高速公路抽检路段公路技术状况监管分析报告',
+  maintain: '养护工程路段技术状况监管分析报告'
+}
+
 // --- 方法 ---
 const fetchReportList = async () => {
   try {
@@ -217,21 +224,33 @@ const fetchReportList = async () => {
 
     if (Array.isArray(filenames)) {
       tableData.value = filenames
-        .map((fullFilename) => {
-          const parts = fullFilename.match(/(.*)_(\d+)$/) // 正则：匹配 文件名_时间戳
-          if (parts && parts.length === 3) {
-            const baseName = parts[1]
-            const timestampSeconds = parseInt(parts[2], 10)
-            const dateTimestamp = timestampSeconds * 1000
-
-            return {
-              report: baseName, // 直接使用文件名部分
-              date: dateTimestamp, // 解析出的日期时间戳 (毫秒)
-              originalFilename: fullFilename // 保存原始完整文件名
-            }
-          } else {
-            console.warn(`无法解析文件名格式: ${fullFilename}`)
+        .map((filename) => {
+          // 新格式: "GSGX_20250525121953" 或 "maintain_20250522110845"
+          // 提取文件名部分和时间戳部分
+          const lastUnderscoreIndex = filename.lastIndexOf('_')
+          if (lastUnderscoreIndex === -1) {
+            console.warn(`无法解析文件名格式: ${filename}`)
             return null
+          }
+
+          const baseName = filename.substring(0, lastUnderscoreIndex)
+          const timestampStr = filename.substring(lastUnderscoreIndex + 1)
+
+          // 将时间戳字符串转换为Date对象
+          // 格式: YYYYMMDDHHmmss
+          const year = parseInt(timestampStr.substring(0, 4), 10)
+          const month = parseInt(timestampStr.substring(4, 6), 10) - 1 // 月份是0-11
+          const day = parseInt(timestampStr.substring(6, 8), 10)
+          const hours = parseInt(timestampStr.substring(8, 10), 10)
+          const minutes = parseInt(timestampStr.substring(10, 12), 10)
+          const seconds = parseInt(timestampStr.substring(12, 14), 10)
+
+          const date = new Date(year, month, day, hours, minutes, seconds)
+
+          return {
+            report: ReportEn2CN[baseName] || baseName, // 使用映射表转换，如果没有匹配则保持原样
+            date: date.getTime(), // 存储时间戳(毫秒)
+            originalFilename: filename
           }
         })
         .filter((item) => item !== null)
@@ -248,10 +267,11 @@ const fetchReportList = async () => {
 }
 
 // 日期格式化函数
-const formatDate = (cellValue) => {
-  console.log(cellValue)
+const formatDate = (row, column, cellValue) => {
   if (!cellValue) return ''
-  const date = new Date(cellValue.date)
+  const date = new Date(cellValue)
+  if (isNaN(date.getTime())) return '无效日期'
+
   const year = date.getFullYear()
   const month = (date.getMonth() + 1).toString().padStart(2, '0')
   const day = date.getDate().toString().padStart(2, '0')
@@ -553,6 +573,27 @@ const handleDelete = async (row) => {
 .el-dialog {
   .el-dialog__body {
     .markdown-content {
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        border: 1px solid #ddd; // 外边框
+
+        th, td {
+          padding: 8px;
+          border: 1px solid #ddd; // 单元格边框
+          text-align: left;
+        }
+
+        th {
+          background-color: #f2f2f2; // 表头背景色
+          font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+          background-color: #f9f9f9; // 隔行变色
+        }
+      }
       img {
         max-width: 100%;
         height: auto;
