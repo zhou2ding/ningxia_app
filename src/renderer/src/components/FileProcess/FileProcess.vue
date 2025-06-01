@@ -141,35 +141,35 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="CICS车检测数据" prop="cicsDataZip">
+          <el-form-item label="CICS车检测数据" prop="cicsDataFile">
             <div class="file-upload-container">
               <el-upload
                 action="#"
                 :auto-upload="false"
-                :on-change="(file) => handleZipFileChange(file, 'cicsDataZip')"
+                :on-change="(file) => handleExcelFileChange(file, 'cicsDataFile')"
                 :show-file-list="false"
-                accept=".zip"
+                accept=".xlsx, .xls"
               >
-                <el-button type="primary" :icon="DocumentAdd">选择ZIP文件</el-button>
-                <el-tooltip content="仅支持.zip格式文件" placement="right" effect="light">
+                <el-button type="primary" :icon="DocumentAdd">选择Excel文件</el-button>
+                <el-tooltip content="仅支持.xlsx, .xls格式文件" placement="right" effect="light">
                   <el-icon class="hint-icon">
                     <QuestionFilled />
                   </el-icon>
                 </el-tooltip>
               </el-upload>
-              <div v-if="uploadForm.cicsDataZip" class="file-card">
+              <div v-if="uploadForm.cicsDataFile" class="file-card">
                 <div class="file-info">
                   <el-icon class="file-icon">
                     <Document />
                   </el-icon>
-                  <span class="file-name">{{ uploadForm.cicsDataZip.name }}</span>
+                  <span class="file-name">{{ uploadForm.cicsDataFile.name }}</span>
                 </div>
                 <el-button
                   type="danger"
                   :icon="Delete"
                   circle
                   size="small"
-                  @click="removeSelectedFile('cicsDataZip')"
+                  @click="removeSelectedFile('cicsDataFile')"
                 />
               </div>
             </div>
@@ -251,7 +251,11 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="路况技术评定" prop="roadConditionFile">
+          <el-form-item
+            v-if="uploadForm.reportType === 'NATIONAL_PROVINCIAL'"
+            label="路况技术评定"
+            prop="roadConditionFile"
+          >
             <div class="file-upload-container">
               <el-upload
                 action="#"
@@ -584,7 +588,7 @@ const initialUploadForm = () => ({
   reportType: '',
   managementUnit: '',
   threeDimensionalDataZip: null,
-  cicsDataZip: null,
+  cicsDataFile: null,
   managementDetailFile: null,
   unitLevelDetailFile: null,
   roadConditionFile: null,
@@ -646,12 +650,12 @@ const isFormValid = computed(() => {
     const commonValid =
       form.managementUnit &&
       form.threeDimensionalDataZip &&
-      form.cicsDataZip &&
+      form.cicsDataFile &&
       form.managementDetailFile &&
-      form.unitLevelDetailFile &&
-      form.roadConditionFile
+      form.unitLevelDetailFile
+
     if (form.reportType === 'NATIONAL_PROVINCIAL') {
-      return commonValid && form.previousYearDiseaseZip
+      return commonValid && form.previousYearDiseaseZip && form.roadConditionFile
     }
     return commonValid
   }
@@ -739,7 +743,7 @@ const handleReportTypeChange = () => {
   // Reset fields that depend on report type
   uploadForm.value.managementUnit = ''
   uploadForm.value.threeDimensionalDataZip = null
-  uploadForm.value.cicsDataZip = null
+  uploadForm.value.cicsDataFile = null
   uploadForm.value.managementDetailFile = null
   uploadForm.value.unitLevelDetailFile = null
   uploadForm.value.roadConditionFile = null
@@ -832,7 +836,7 @@ const handleUploadConfirm = async () => {
   if (isStandardRoadType.value) {
     formDataPayload.append('managementUnit', uploadForm.value.managementUnit)
     formDataPayload.append('threeDimensionalDataZip', uploadForm.value.threeDimensionalDataZip)
-    formDataPayload.append('cicsDataZip', uploadForm.value.cicsDataZip)
+    formDataPayload.append('cicsDataFile', uploadForm.value.cicsDataFile)
     formDataPayload.append('managementDetailFile', uploadForm.value.managementDetailFile)
     formDataPayload.append('unitLevelDetailFile', uploadForm.value.unitLevelDetailFile)
     formDataPayload.append('roadConditionFile', uploadForm.value.roadConditionFile)
