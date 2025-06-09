@@ -26,7 +26,6 @@
                   :max="100"
                   controls-position="right"
                 />
-                <span class="unit-suffix">%</span>
               </el-form-item>
               <h4 class="subsection">路面质量指标</h4>
               <el-form-item label="公路网级沥青路面PQI ≥">
@@ -104,7 +103,6 @@
                   :max="100"
                   controls-position="right"
                 />
-                <span class="unit-suffix">%</span>
               </el-form-item>
               <h4 class="subsection">路面质量指标</h4>
               <h4 class="subsection road-level-title">一级及二级公路</h4>
@@ -252,7 +250,6 @@
                   :max="100"
                   controls-position="right"
                 />
-                <span class="unit-suffix">%</span>
               </el-form-item>
               <h4 class="subsection">路面质量指标</h4>
               <h4 class="subsection road-level-title">一级及二级公路</h4>

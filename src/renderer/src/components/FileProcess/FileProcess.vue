@@ -252,7 +252,10 @@
           </el-form-item>
 
           <el-form-item
-            v-if="uploadForm.reportType === 'NATIONAL_PROVINCIAL'"
+            v-if="
+              uploadForm.reportType === 'NATIONAL_PROVINCIAL' ||
+              uploadForm.reportType === 'EXPRESSWAY'
+            "
             label="路况技术评定"
             prop="roadConditionFile"
           >
@@ -739,6 +742,75 @@ const handleDialogClose = (done) => {
   done()
 }
 
+const mapReportTypeToSettingType = (reportType) => {
+  const mapping = {
+    EXPRESSWAY: 'expressway',
+    NATIONAL_PROVINCIAL: 'nationalProvincial',
+    RURAL: 'rural'
+  }
+  return mapping[reportType]
+}
+
+async function getCalculationSettings(reportType) {
+  const settingType = mapReportTypeToSettingType(reportType)
+  // 对于不需要特定指标的报告类型（如 MAINTENANCE），直接返回空对象
+  if (!settingType) {
+    return {}
+  }
+
+  // 默认值，从 SettingsPanel.vue 复制而来，作为获取失败时的备用
+  const defaults = {
+    expressway: {
+      pqiTarget: 92,
+      networkPQI: 90,
+      excellentRate: 88,
+      unitPQI: 80,
+      unitPCI: 80,
+      unitRQI: 80,
+      unitRDI: 75,
+      unitSRI: 75
+    },
+    nationalProvincial: {
+      pqiTarget: 90.5,
+      networkPQI1: 85,
+      networkExcellentRate1: 80,
+      networkPQI2: 80,
+      networkExcellentRate2: 75,
+      unitPQI1: 75,
+      unitPCI1: 75,
+      unitRQI1: 75,
+      unitRDI1: 70,
+      unitSRI1: 70,
+      unitPQI2: 70,
+      unitPCI2: 70,
+      unitRQI2: 70
+    },
+    rural: {
+      pqiTarget: 85,
+      networkPQI1: 85,
+      networkPQI2: 80,
+      unitPQI1: 75,
+      unitPCI1: 75,
+      unitRQI1: 75,
+      unitRDI1: 70,
+      unitSRI1: 70,
+      unitPQI2: 70,
+      unitPCI2: 70,
+      unitRQI2: 70
+    }
+  }
+
+  try {
+    const response = await service.get(`/api/settings/calculation/${settingType}`)
+    // 如果成功获取到数据，则返回数据，否则返回当前类型的默认值
+    return response.data || defaults[settingType]
+  } catch (error) {
+    console.warn(`获取“${settingType}”的计算指标配置失败，将使用默认值。错误:`, error)
+    // 如果接口404或发生其他错误，返回默认值
+    return defaults[settingType]
+  }
+}
+
 const handleReportTypeChange = () => {
   // Reset fields that depend on report type
   uploadForm.value.managementUnit = ''
@@ -867,7 +939,22 @@ const handleUploadConfirm = async () => {
 
   try {
     const res = await service.post('/api/unzip', formDataPayload, {}) // Axios handles multipart/form-data
-    files.value = res.data.files
+
+    // 获取后端返回的路径映射对象
+    const processedFilePathsMap = res.data.files
+    if (!processedFilePathsMap || Object.keys(processedFilePathsMap).length === 0) {
+      throw new Error('服务器未返回有效的文件路径。')
+    }
+
+    // 1. 将完整的 Map 存入 Pinia Store，供 handleCalculate 使用
+    uploadStore.setProcessedFilePaths(processedFilePathsMap)
+
+    // 2. 从 Map 的 values 中提取路径列表，用于在界面上显示
+    files.value = Object.values(processedFilePathsMap)
+
+    // 3. 默认全选所有上传成功的文件
+    selectedFiles.value = [...files.value]
+
     progress.value = 100
     progressStatusText.value = '上传完成'
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -895,10 +982,19 @@ const handleUploadConfirm = async () => {
 }
 
 const handleCalculate = async () => {
+  // 1. 检查用户是否在UI上选择了文件
   if (!selectedFiles.value.length) {
     ElMessage.warning('请至少选择一个文件进行计算')
     return
   }
+
+  // 2. 检查Pinia中是否存在从/unzip接口获取的文件路径Map
+  const filePathsMap = uploadStore.processedFilePaths
+  if (!filePathsMap) {
+    ElMessage.error('无法找到文件映射关系，请重新上传数据。')
+    return
+  }
+
   isCalculating.value = true
   progress.value = 0
   progressStatusText.value = '计算中 0%'
@@ -910,16 +1006,85 @@ const handleCalculate = async () => {
   }, 500)
 
   try {
-    const currentTimestamp = Math.floor(Date.now() / 1000)
-    const requestData = {
-      files: selectedFiles.value,
-      reportType: uploadStore.reportType,
-      managementUnit: uploadStore.managementUnit, // This might need adjustment based on report type
-      projectName: uploadStore.projectName, // Add projectName if available
-      timestamp: currentTimestamp
+    const reportType = uploadStore.reportType
+
+    // 3. 异步获取计算指标（如果没有定义 getCalculationSettings 函数，此处会报错）
+    const settings = await getCalculationSettings(reportType)
+
+    // 4. 构建发送到后端的请求体 (payload)
+    const payload = {
+      report_type: reportType
     }
 
-    const mdResponse = await service.post('/api/calculate/md', requestData)
+    switch (reportType) {
+      case 'MAINTENANCE':
+      case 'CONSTRUCTION':
+        payload.maintain = {
+          project_name: uploadStore.projectName,
+          before_root_dir: filePathsMap.firstInspectionExcel,
+          maintain_xlsx_file: filePathsMap.secondInspectionExcel,
+          after_root_dir: filePathsMap.diseaseDataExcel
+        }
+        break
+
+      case 'EXPRESSWAY':
+        payload.express_way = {
+          maintenance_unit_file: filePathsMap.managementDetailFile,
+          unit_level_file: filePathsMap.unitLevelDetailFile,
+          pingding_file: filePathsMap.cicsDataFile,
+          level_file: filePathsMap.roadConditionFile,
+          danwei: uploadStore.managementUnit,
+          pqi_value: settings.networkPQI ?? 90,
+          threshold: settings.excellentRate ?? 88,
+          PQI_threshold: settings.unitPQI ?? 80,
+          PCI_threshold: settings.unitPCI ?? 80,
+          RQI_threshold: settings.unitRQI ?? 80,
+          RDI_threshold: settings.unitRDI ?? 75,
+          SRI_threshold: settings.unitSRI ?? 75
+        }
+        break
+
+      case 'RURAL':
+        payload.rural = {
+          unit_xlsx: filePathsMap.unitLevelDetailFile,
+          root_dir: filePathsMap.threeDimensionalDataZip,
+          xlsx_file: filePathsMap.managementDetailFile,
+          gy_value: uploadStore.managementUnit,
+          pqi_wd1: settings.pqiTarget ?? 85,
+          pqi_12: settings.networkPQI1 ?? 85,
+          pqi_34: settings.networkPQI2 ?? 80
+        }
+        break
+
+      case 'NATIONAL_PROVINCIAL':
+        payload.national_province = {
+          xlsx_file: filePathsMap.managementDetailFile,
+          CICScardata: filePathsMap.cicsDataFile,
+          unit_path: filePathsMap.unitLevelDetailFile,
+          file_path: filePathsMap.roadConditionFile,
+          gy_value: uploadStore.managementUnit,
+          pqi_value: settings.pqiTarget ?? 90.5,
+          wdpqi_12: settings.networkPQI1 ?? 85,
+          wdpqi_34: settings.networkPQI2 ?? 80,
+          pqi_12: settings.unitPQI1 ?? 75,
+          pci_12: settings.unitPCI1 ?? 75,
+          rqi_12: settings.unitRQI1 ?? 75,
+          rdi_12: settings.unitRDI1 ?? 70,
+          pqi_34: settings.unitPQI2 ?? 70,
+          pci_34: settings.unitPCI2 ?? 70,
+          rqi_34: settings.unitRQI2 ?? 70,
+          rate_12: settings.networkExcellentRate1 ?? 80,
+          rate_34: settings.networkExcellentRate2 ?? 75
+        }
+        break
+
+      default:
+        // 如果没有匹配的类型，抛出错误
+        throw new Error(`未知的报告类型: ${reportType}`)
+    }
+
+    // 5. 发送请求
+    const mdResponse = await service.post('/api/calculate/md', payload)
 
     if (mdResponse?.data?.filename) {
       const mdFilename = mdResponse.data.filename
@@ -933,7 +1098,7 @@ const handleCalculate = async () => {
 
       ElMessage.success('报告已生成')
       resetUploadForm()
-      resetFileList()
+      resetFileList() // 确保 resetFileList 函数存在，用于清空 files 和 selectedFiles
       uploadStore.reset()
     } else {
       ElMessage.error('报告生成失败，服务器未返回有效文件名。')
@@ -964,7 +1129,16 @@ const handleCalculate = async () => {
 
 const getFileName = (path) => {
   if (!path) return ''
-  return path.split(/[\\/]/).pop()
+
+  // 1. 从完整路径中获取最后一部分（文件名或目录名）
+  let baseName = path.split(/[\\/]/).pop()
+
+  // 2. 检查是否以 '_extracted' 结尾，如果是则移除
+  if (baseName.endsWith('_extracted')) {
+    baseName = baseName.slice(0, -10)
+  }
+
+  return baseName
 }
 
 const handleCheckAll = (value) => {
