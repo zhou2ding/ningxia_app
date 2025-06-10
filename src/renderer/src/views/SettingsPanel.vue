@@ -742,7 +742,7 @@ export default {
       let typeSpecificDefaults = {}
       if (roadType === 'expressway') {
         typeSpecificDefaults = {
-          expressway_pqiTarget: 92,
+          expressway_pqiTarget: 90,
           expressway_networkPQI: 90,
           expressway_excellentRate: 88,
           expressway_unitPQI: 80,

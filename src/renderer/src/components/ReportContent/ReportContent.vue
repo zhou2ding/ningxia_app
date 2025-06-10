@@ -16,19 +16,21 @@
         label="生成日期"
         :formatter="formatDate"
       ></el-table-column>
-      <el-table-column #default="scope" width="250" label="操作">
+      <el-table-column #default="scope" width="300" label="操作">
         <el-button type="primary" link @click="handleView(scope.row)">预览</el-button>
         <el-button type="primary" link @click="prepareDownload(scope.row, 'download')"
           >下载
         </el-button>
-        <el-button
-          v-if="shouldShowExtraExport(scope.row.report)"
-          type="primary"
-          link
-          @click="prepareDownload(scope.row, 'extraExport')"
-        >
-          导出达标情况
-        </el-button>
+        <!--        <el-button-->
+        <!--          v-if="shouldShowExtraExport(scope.row.report)"-->
+        <!--          type="primary"-->
+        <!--          link-->
+        <!--          @click="prepareDownload(scope.row, 'extraExport')"-->
+        <!--        >-->
+        <!--          导出达标情况-->
+        <!--        </el-button>-->
+
+        <el-button type="primary" link @click="exportTables(scope.row)"> 导出指标明细表</el-button>
         <el-button type="danger" link style="color: #ff4d4f" @click="handleDelete(scope.row)">
           删除
         </el-button>
@@ -196,9 +198,9 @@ const renderedMarkdown = computed(() => {
 })
 
 // 判断是否显示"导出达标情况"按钮
-const shouldShowExtraExport = (reportName) => {
-  return reportName.includes('国省') || reportName.includes('高速') || reportName.includes('农村')
-}
+// const shouldShowExtraExport = (reportName) => {
+//   return reportName.includes('国省') || reportName.includes('高速') || reportName.includes('农村')
+// }
 
 onMounted(() => {
   fetchReportList()
@@ -225,7 +227,7 @@ const fetchReportList = async () => {
     if (Array.isArray(filenames)) {
       tableData.value = filenames
         .map((filename) => {
-          // 新格式: "GSGX_20250525121953" 或 "maintain_20250522110845"
+          // 格式: "GSGX_20250525121953" 或 "maintain_20250522110845"
           // 提取文件名部分和时间戳部分
           const lastUnderscoreIndex = filename.lastIndexOf('_')
           if (lastUnderscoreIndex === -1) {
@@ -349,6 +351,90 @@ const selectWatermarkOption = (addWatermark) => {
     }
   } else {
     showWatermarkForm.value = false
+  }
+}
+
+const exportTables = async (row) => {
+  try {
+    // 显示全屏加载动画
+    const loadingInstance = ElLoading.service({
+      lock: true,
+      text: '正在打包并导出文件，请稍候...',
+      background: 'rgba(0, 0, 0, 0.7)'
+    })
+
+    try {
+      const url = `/api/reports/tables/${row.originalFilename}`
+      const response = await service({
+        url: url,
+        method: 'POST',
+        responseType: 'blob'
+      })
+
+      // 处理后端返回的文件流并触发浏览器下载
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'] || 'application/octet-stream'
+      })
+
+      // 从 'Content-Disposition' 头中解析文件名，提供默认值以防万一
+      let filename = `${row.originalFilename}_tables.zip`
+      const contentDisposition = response.headers['content-disposition']
+      if (contentDisposition) {
+        const utf8Filename = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;]+)/i)
+        if (utf8Filename && utf8Filename[1]) {
+          filename = decodeURIComponent(utf8Filename[1])
+        } else {
+          const fallbackFilename = contentDisposition.match(/filename="?([^;"]+)/i)
+          if (fallbackFilename && fallbackFilename[1]) {
+            filename = fallbackFilename[1].replace(/^"(.*)"$/, '')
+          }
+        }
+      }
+
+      // 创建一个临时的 a 标签来触发下载
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+
+      // 清理创建的临时元素和URL
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+
+      ElMessage.success(`${filename} 导出成功`)
+    } catch (error) {
+      console.error('导出指标明细表时出错:', error)
+      // 如果后端返回的是JSON错误信息（即使在blob响应中），尝试解析并显示
+      if (
+        error.response &&
+        error.response.data instanceof Blob &&
+        error.response.data.type.toLowerCase().indexOf('json') !== -1
+      ) {
+        const errorText = await error.response.data.text()
+        const errorJson = JSON.parse(errorText)
+        ElMessage.error(`导出失败: ${errorJson.error || '未知服务端错误'}`)
+      } else {
+        ElMessage.error(
+          '导出失败: ' +
+            (error.response?.data?.message ||
+              error.response?.data?.error ||
+              error.message ||
+              '未知错误')
+        )
+      }
+    } finally {
+      // 5. 无论成功或失败，都关闭加载动画
+      loadingInstance.close()
+    }
+  } catch (error) {
+    // 用户在确认框中点击了“取消”
+    if (error === 'cancel') {
+      ElMessage.info('已取消导出操作')
+    } else {
+      console.error('导出确认时发生错误:', error)
+    }
   }
 }
 
@@ -579,7 +665,8 @@ const handleDelete = async (row) => {
         margin: 16px 0;
         border: 1px solid #ddd; // 外边框
 
-        th, td {
+        th,
+        td {
           padding: 8px;
           border: 1px solid #ddd; // 单元格边框
           text-align: left;
@@ -594,6 +681,7 @@ const handleDelete = async (row) => {
           background-color: #f9f9f9; // 隔行变色
         }
       }
+
       img {
         max-width: 100%;
         height: auto;

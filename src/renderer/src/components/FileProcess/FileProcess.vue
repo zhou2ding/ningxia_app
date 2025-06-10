@@ -804,7 +804,7 @@ async function getCalculationSettings(reportType) {
   // 默认值，从 SettingsPanel.vue 复制而来，作为获取失败时的备用
   const defaults = {
     expressway: {
-      pqiTarget: 92,
+      pqiTarget: 90,
       networkPQI: 90,
       excellentRate: 88,
       unitPQI: 80,
@@ -1078,7 +1078,8 @@ const handleCalculate = async () => {
           pingding_file: filePathsMap.cicsDataFile,
           level_file: filePathsMap.roadConditionFile,
           danwei: uploadStore.managementUnit,
-          pqi_value: settings.networkPQI ?? 90,
+          pqi_valuewd1: settings.pqiTarget ?? 90,
+          pqi_valuewd2: settings.networkPQI ?? 90,
           threshold: settings.excellentRate ?? 88,
           PQI_threshold: settings.unitPQI ?? 80,
           PCI_threshold: settings.unitPCI ?? 80,
