@@ -26,7 +26,15 @@
 
       <el-checkbox-group v-model="selectedFiles">
         <div v-for="file in files" :key="file" class="file-item">
-          <el-checkbox :label="file">{{ getFileName(file) }}</el-checkbox>
+          <el-tooltip :content="getFileName(file)" placement="top" :show-after="500" effect="dark">
+            <el-checkbox :label="file">
+              <span class="file-entry" :class="{ 'is-folder': isFolder(getFileName(file)) }">
+                <el-icon v-if="isFolder(getFileName(file))" class="file-icon"><Folder /></el-icon>
+                <el-icon v-else class="file-icon"><Document /></el-icon>
+                <span>{{ getFileName(file) }}</span>
+              </span>
+            </el-checkbox>
+          </el-tooltip>
         </div>
       </el-checkbox-group>
     </div>
@@ -43,7 +51,7 @@
     <el-dialog
       v-model="uploadDialogVisible"
       :title="uploadDialogTitle"
-      width="700px"
+      width="800px"
       :before-close="handleDialogClose"
     >
       <el-form :model="uploadForm" label-width="210px" ref="uploadFormRef">
@@ -480,6 +488,7 @@ import {
   QuestionFilled,
   DocumentAdd,
   Delete,
+  Folder,
   Document
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
@@ -647,34 +656,68 @@ const isProjectType = computed(() => {
 
 const isFormValid = computed(() => {
   const form = uploadForm.value
-  if (!form.reportType) return false
-
-  if (isStandardRoadType.value) {
-    const commonValid =
-      form.managementUnit &&
-      form.threeDimensionalDataZip &&
-      form.cicsDataFile &&
-      form.managementDetailFile &&
-      form.unitLevelDetailFile
-
-    if (form.reportType === 'NATIONAL_PROVINCIAL') {
-      return commonValid && form.previousYearDiseaseZip && form.roadConditionFile
-    }
-    return commonValid
+  if (!form.reportType) {
+    return false
   }
 
-  if (isProjectType.value) {
-    return (
-      form.projectName &&
-      form.projectName.length > 0 &&
-      form.projectName.length <= 100 &&
-      form.firstInspectionExcel &&
-      form.secondInspectionExcel &&
-      form.diseaseDataExcel
-    )
+  switch (form.reportType) {
+    // 高速公路
+    case 'EXPRESSWAY':
+      return !!(
+        form.managementUnit &&
+        form.threeDimensionalDataZip &&
+        form.cicsDataFile &&
+        form.managementDetailFile &&
+        form.unitLevelDetailFile &&
+        form.roadConditionFile
+      )
+
+    // 农村公路
+    case 'RURAL':
+      return !!(
+        form.managementUnit &&
+        form.threeDimensionalDataZip &&
+        form.cicsDataFile &&
+        form.managementDetailFile &&
+        form.unitLevelDetailFile
+      )
+
+    // 普通国省干线
+    case 'NATIONAL_PROVINCIAL':
+      return !!(
+        form.managementUnit &&
+        form.threeDimensionalDataZip &&
+        form.cicsDataFile &&
+        form.managementDetailFile &&
+        form.unitLevelDetailFile &&
+        form.roadConditionFile &&
+        form.previousYearDiseaseZip
+      )
+
+    // 养护工程 或 建设工程
+    case 'MAINTENANCE':
+    case 'CONSTRUCTION':
+      return !!(
+        form.projectName &&
+        form.projectName.length > 0 &&
+        form.projectName.length <= 100 &&
+        form.firstInspectionExcel &&
+        form.secondInspectionExcel &&
+        form.diseaseDataExcel
+      )
+
+    // 如果出现未知的报告类型，默认为无效
+    default:
+      return false
   }
-  return false
 })
+
+const isFolder = (name) => {
+  if (!name) return false
+  // 一个简单的判断：如果名称中没有点'.', 或者点在第一个位置（如.env），则认为是文件夹
+  const lastDotIndex = name.lastIndexOf('.')
+  return lastDotIndex === -1 || lastDotIndex === 0
+}
 
 const uploadDialogTitle = computed(() => {
   const selectedReportType = reportTypes.find((rt) => rt.value === uploadForm.value.reportType)
@@ -943,7 +986,7 @@ const handleUploadConfirm = async () => {
     // 获取后端返回的路径映射对象
     const processedFilePathsMap = res.data.files
     if (!processedFilePathsMap || Object.keys(processedFilePathsMap).length === 0) {
-      throw new Error('服务器未返回有效的文件路径。')
+      ElMessage.error('服务器未返回有效的文件路径')
     }
 
     // 1. 将完整的 Map 存入 Pinia Store，供 handleCalculate 使用
@@ -1029,6 +1072,7 @@ const handleCalculate = async () => {
 
       case 'EXPRESSWAY':
         payload.express_way = {
+          root_path: filePathsMap.threeDimensionalDataZip,
           maintenance_unit_file: filePathsMap.managementDetailFile,
           unit_level_file: filePathsMap.unitLevelDetailFile,
           pingding_file: filePathsMap.cicsDataFile,
@@ -1046,6 +1090,7 @@ const handleCalculate = async () => {
 
       case 'RURAL':
         payload.rural = {
+          nc_base_dir: filePathsMap.threeDimensionalDataZip,
           unit_xlsx: filePathsMap.unitLevelDetailFile,
           root_dir: filePathsMap.threeDimensionalDataZip,
           xlsx_file: filePathsMap.managementDetailFile,
@@ -1058,6 +1103,7 @@ const handleCalculate = async () => {
 
       case 'NATIONAL_PROVINCIAL':
         payload.national_province = {
+          root_path: filePathsMap.threeDimensionalDataZip,
           xlsx_file: filePathsMap.managementDetailFile,
           CICScardata: filePathsMap.cicsDataFile,
           unit_path: filePathsMap.unitLevelDetailFile,
@@ -1080,7 +1126,7 @@ const handleCalculate = async () => {
 
       default:
         // 如果没有匹配的类型，抛出错误
-        throw new Error(`未知的报告类型: ${reportType}`)
+        ElMessage.error(`未知的报告类型: ${reportType}`)
     }
 
     // 5. 发送请求
@@ -1216,6 +1262,18 @@ const handleCheckAll = (value) => {
 .file-item {
   padding: 8px;
   border-bottom: 1px solid #eee;
+  box-sizing: border-box;
+}
+
+.file-item .el-checkbox {
+  width: 100%;
+}
+
+.file-item :deep(.el-checkbox__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
 
 .progress-mask {
