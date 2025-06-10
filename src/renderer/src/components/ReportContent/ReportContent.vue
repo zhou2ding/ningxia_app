@@ -215,7 +215,8 @@ onUnmounted(() => {
 const ReportEn2CN = {
   GSGX: '普通国省干线抽检路段公路技术状况监管分析报告',
   highway: '高速公路抽检路段公路技术状况监管分析报告',
-  maintain: '养护工程路段技术状况监管分析报告'
+  maintain: '养护工程路段技术状况监管分析报告',
+  construction: '建设工程路段技术状况监管分析报告'
 }
 
 // --- 方法 ---

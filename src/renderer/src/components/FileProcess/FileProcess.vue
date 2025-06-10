@@ -503,7 +503,12 @@ const reportTypes = [
   { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY', name: '高速公路' },
   { label: '养护工程路段技术状况监管分析报告', value: 'MAINTENANCE', name: '养护工程' },
   { label: '建设工程路段技术状况监管分析报告', value: 'CONSTRUCTION', name: '建设工程' },
-  { label: '农村公路抽检路段公路技术状况监管分析报告', value: 'RURAL', name: '农村公路' },
+  {
+    label: '农村公路抽检路段公路技术状况监管分析报告',
+    value: 'RURAL',
+    name: '农村公路',
+    disabled: true
+  },
   {
     label: '普通国省干线抽检路段公路技术状况监管分析报告',
     value: 'NATIONAL_PROVINCIAL',
