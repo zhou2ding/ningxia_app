@@ -115,7 +115,7 @@
             </el-select>
           </el-form-item>
 
-          <el-form-item label="三位多功能路况快速检测车数据" prop="threeDimensionalDataZip">
+          <el-form-item label="三维多功能路况快速检测车数据" prop="threeDimensionalDataZip">
             <div class="file-upload-container">
               <el-upload
                 action="#"
@@ -500,20 +500,15 @@ const uploadStore = useUploadStore()
 const uploadFormRef = ref(null)
 
 const reportTypes = [
-  { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY', name: '高速公路' },
   { label: '养护工程路段技术状况监管分析报告', value: 'MAINTENANCE', name: '养护工程' },
   { label: '建设工程路段技术状况监管分析报告', value: 'CONSTRUCTION', name: '建设工程' },
-  {
-    label: '农村公路抽检路段公路技术状况监管分析报告',
-    value: 'RURAL',
-    name: '农村公路',
-    disabled: true
-  },
+  { label: '高速公路抽检路段公路技术状况监管分析报告', value: 'EXPRESSWAY', name: '高速公路' },
   {
     label: '普通国省干线抽检路段公路技术状况监管分析报告',
     value: 'NATIONAL_PROVINCIAL',
     name: '普通国省干线'
-  }
+  },
+  { label: '农村公路抽检路段公路技术状况监管分析报告', value: 'RURAL', name: '农村公路' }
 ]
 
 const managementUnitsConfig = {
@@ -1114,6 +1109,7 @@ const handleCalculate = async () => {
           CICScardata: filePathsMap.cicsDataFile,
           unit_path: filePathsMap.unitLevelDetailFile,
           file_path: filePathsMap.roadConditionFile,
+          bitumen_folder_path: filePathsMap.previousYearDiseaseZip,
           gy_value: uploadStore.managementUnit,
           pqi_value: settings.pqiTarget ?? 90.5,
           wdpqi_12: settings.networkPQI1 ?? 85,
