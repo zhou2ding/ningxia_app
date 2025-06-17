@@ -9,11 +9,11 @@
       <el-button
         type="primary"
         :icon="UploadFilled"
-        :disabled="isUploading"
-        :loading="isUploading"
+        :disabled="uploadStore.isUploading"
+        :loading="uploadStore.isUploading"
         @click="showUploadDialog"
       >
-        {{ isUploading ? '上传中 ...' : '上传数据' }}
+        {{ uploadStore.isUploading ? '上传中 ...' : '上传数据' }}
       </el-button>
     </div>
 
@@ -41,17 +41,17 @@
 
     <el-button
       type="success"
-      :disabled="!selectedFiles.length || isCalculating"
-      :loading="isCalculating"
+      :disabled="!selectedFiles.length || uploadStore.isCalculating"
+      :loading="uploadStore.isCalculating"
       @click="handleCalculate"
     >
-      {{ isCalculating ? '计算中 ...' : '开始计算' }}
+      {{ uploadStore.isCalculating ? '计算中 ...' : '开始计算' }}
     </el-button>
 
     <el-dialog
       v-model="uploadDialogVisible"
       :title="uploadDialogTitle"
-      width="800px"
+      width="950px"
       :before-close="handleDialogClose"
     >
       <el-form :model="uploadForm" label-width="210px" ref="uploadFormRef">
@@ -464,25 +464,25 @@
         <el-button
           type="primary"
           :disabled="!isFormValid"
-          :loading="isUploading"
+          :loading="uploadStore.isUploading"
           @click="handleUploadConfirm"
         >
-          确认上传
+          {{ uploadStore.isUploading ? '上传中...' : '确认上传' }}
         </el-button>
       </template>
     </el-dialog>
 
-    <div v-if="isUploading || isCalculating" class="progress-mask">
-      <el-progress type="circle" :percentage="progress" :width="80" color="#5fbfff" />
+    <div v-if="uploadStore.isUploading || uploadStore.isCalculating" class="progress-mask">
+      <el-progress type="circle" :percentage="uploadStore.progress" :width="80" color="#5fbfff" />
       <div class="progress-text">
-        {{ progressStatusText }}
+        {{ uploadStore.progressStatusText }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   UploadFilled,
   QuestionFilled,
@@ -492,11 +492,8 @@ import {
   Document
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import service from '../../api/request'
 import { useUploadStore } from '../../store/upload'
-import { emit } from '../../utils/eventBus'
 
-const uploadStore = useUploadStore()
 const uploadFormRef = ref(null)
 
 const reportTypes = [
@@ -508,7 +505,12 @@ const reportTypes = [
     value: 'NATIONAL_PROVINCIAL',
     name: '普通国省干线'
   },
-  { label: '农村公路抽检路段公路技术状况监管分析报告', value: 'RURAL', name: '农村公路' }
+  {
+    label: '农村公路抽检路段公路技术状况监管分析报告',
+    value: 'RURAL',
+    name: '农村公路',
+    disabled: true
+  }
 ]
 
 const managementUnitsConfig = {
@@ -620,10 +622,7 @@ const isCalculating = ref(false)
 const isUploading = ref(false)
 const progress = ref(0)
 const progressStatusText = ref('正在处理...')
-
-const progressSpeed = computed(() => {
-  return isCalculating.value ? 1 : 2
-})
+const uploadStore = useUploadStore()
 
 const checkAll = computed({
   get() {
@@ -785,75 +784,6 @@ const handleDialogClose = (done) => {
   done()
 }
 
-const mapReportTypeToSettingType = (reportType) => {
-  const mapping = {
-    EXPRESSWAY: 'expressway',
-    NATIONAL_PROVINCIAL: 'nationalProvincial',
-    RURAL: 'rural'
-  }
-  return mapping[reportType]
-}
-
-async function getCalculationSettings(reportType) {
-  const settingType = mapReportTypeToSettingType(reportType)
-  // 对于不需要特定指标的报告类型（如 MAINTENANCE），直接返回空对象
-  if (!settingType) {
-    return {}
-  }
-
-  // 默认值，从 SettingsPanel.vue 复制而来，作为获取失败时的备用
-  const defaults = {
-    expressway: {
-      pqiTarget: 90,
-      networkPQI: 90,
-      excellentRate: 88,
-      unitPQI: 80,
-      unitPCI: 80,
-      unitRQI: 80,
-      unitRDI: 75,
-      unitSRI: 75
-    },
-    nationalProvincial: {
-      pqiTarget: 90.5,
-      networkPQI1: 85,
-      networkExcellentRate1: 80,
-      networkPQI2: 80,
-      networkExcellentRate2: 75,
-      unitPQI1: 75,
-      unitPCI1: 75,
-      unitRQI1: 75,
-      unitRDI1: 70,
-      unitSRI1: 70,
-      unitPQI2: 70,
-      unitPCI2: 70,
-      unitRQI2: 70
-    },
-    rural: {
-      pqiTarget: 85,
-      networkPQI1: 85,
-      networkPQI2: 80,
-      unitPQI1: 75,
-      unitPCI1: 75,
-      unitRQI1: 75,
-      unitRDI1: 70,
-      unitSRI1: 70,
-      unitPQI2: 70,
-      unitPCI2: 70,
-      unitRQI2: 70
-    }
-  }
-
-  try {
-    const response = await service.get(`/api/settings/calculation/${settingType}`)
-    // 如果成功获取到数据，则返回数据，否则返回当前类型的默认值
-    return response.data || defaults[settingType]
-  } catch (error) {
-    console.warn(`获取“${settingType}”的计算指标配置失败，将使用默认值。错误:`, error)
-    // 如果接口404或发生其他错误，返回默认值
-    return defaults[settingType]
-  }
-}
-
 const handleReportTypeChange = () => {
   // Reset fields that depend on report type
   uploadForm.value.managementUnit = ''
@@ -920,6 +850,31 @@ const resetFileList = () => {
   selectedFiles.value = []
 }
 
+onMounted(() => {
+  if (uploadStore.processedFilePaths && Object.keys(uploadStore.processedFilePaths).length > 0) {
+    files.value = Object.values(uploadStore.processedFilePaths)
+    selectedFiles.value = [...files.value]
+  }
+})
+
+watch(
+  () => uploadStore.processedFilePaths,
+  (newFilePaths) => {
+    // 当 store 中的文件路径不为空时，更新UI
+    if (newFilePaths && Object.keys(newFilePaths).length > 0) {
+      files.value = Object.values(newFilePaths)
+      selectedFiles.value = [...files.value] // 默认全选
+    } else {
+      // 当 store 中的文件路径被清空 (null) 时，也清空UI
+      resetFileList()
+    }
+  },
+  {
+    immediate: true, // 关键：让 watch 在组件加载时立即执行一次
+    deep: true // 确保能监听到对象内部的变化
+  }
+)
+
 const updateProgressText = () => {
   if (isUploading.value) {
     progressStatusText.value = `上传中 ${progress.value}%`
@@ -938,241 +893,74 @@ const handleCancelUpload = () => {
 }
 
 const handleUploadConfirm = async () => {
+  // 1. 前端表单校验
   if (!isFormValid.value) {
     ElMessage.warning('请填写所有必填项并上传必需文件')
     return
   }
 
+  // 2. 准备 FormData 对象
   const formDataPayload = new FormData()
   formDataPayload.append('reportType', uploadForm.value.reportType)
-
-  const storeData = { reportType: uploadForm.value.reportType }
-
   if (isStandardRoadType.value) {
     formDataPayload.append('managementUnit', uploadForm.value.managementUnit)
-    formDataPayload.append('threeDimensionalDataZip', uploadForm.value.threeDimensionalDataZip)
-    formDataPayload.append('cicsDataFile', uploadForm.value.cicsDataFile)
-    formDataPayload.append('managementDetailFile', uploadForm.value.managementDetailFile)
-    formDataPayload.append('unitLevelDetailFile', uploadForm.value.unitLevelDetailFile)
-    formDataPayload.append('roadConditionFile', uploadForm.value.roadConditionFile)
-    if (uploadForm.value.reportType === 'NATIONAL_PROVINCIAL') {
+    if (uploadForm.value.threeDimensionalDataZip) {
+      formDataPayload.append('threeDimensionalDataZip', uploadForm.value.threeDimensionalDataZip)
+    }
+    if (uploadForm.value.cicsDataFile) {
+      formDataPayload.append('cicsDataFile', uploadForm.value.cicsDataFile)
+    }
+    if (uploadForm.value.managementDetailFile) {
+      formDataPayload.append('managementDetailFile', uploadForm.value.managementDetailFile)
+    }
+    if (uploadForm.value.unitLevelDetailFile) {
+      formDataPayload.append('unitLevelDetailFile', uploadForm.value.unitLevelDetailFile)
+    }
+    if (uploadForm.value.roadConditionFile) {
+      formDataPayload.append('roadConditionFile', uploadForm.value.roadConditionFile)
+    }
+    if (
+      uploadForm.value.reportType === 'NATIONAL_PROVINCIAL' &&
+      uploadForm.value.previousYearDiseaseZip
+    ) {
       formDataPayload.append('previousYearDiseaseZip', uploadForm.value.previousYearDiseaseZip)
     }
-    storeData.managementUnit = uploadForm.value.managementUnit
   } else if (isProjectType.value) {
     formDataPayload.append('projectName', uploadForm.value.projectName)
-    formDataPayload.append('firstInspectionExcel', uploadForm.value.firstInspectionExcel)
-    formDataPayload.append('secondInspectionExcel', uploadForm.value.secondInspectionExcel)
-    formDataPayload.append('diseaseDataExcel', uploadForm.value.diseaseDataExcel)
-    storeData.projectName = uploadForm.value.projectName // Store project name if needed later
+    if (uploadForm.value.firstInspectionExcel) {
+      formDataPayload.append('firstInspectionExcel', uploadForm.value.firstInspectionExcel)
+    }
+    if (uploadForm.value.secondInspectionExcel) {
+      formDataPayload.append('secondInspectionExcel', uploadForm.value.secondInspectionExcel)
+    }
+    if (uploadForm.value.diseaseDataExcel) {
+      formDataPayload.append('diseaseDataExcel', uploadForm.value.diseaseDataExcel)
+    }
   }
 
-  uploadStore.setFormData(storeData)
+  // 3. 将元数据存入 Pinia Store (不变)
+  uploadStore.setFormData({
+    reportType: uploadForm.value.reportType,
+    projectName: uploadForm.value.projectName,
+    managementUnit: uploadForm.value.managementUnit
+  })
 
-  isUploading.value = true
+  // 4. 【关键改动】立刻关闭弹窗
   uploadDialogVisible.value = false
-  progress.value = 0
-  progressStatusText.value = '上传中 0%'
 
-  const timer = setInterval(() => {
-    if (progress.value < 90) {
-      progress.value = Math.min(progress.value + progressSpeed.value * 2, 99)
-    }
-  }, 300)
-
-  try {
-    const res = await service.post('/api/unzip', formDataPayload, {}) // Axios handles multipart/form-data
-
-    // 获取后端返回的路径映射对象
-    const processedFilePathsMap = res.data.files
-    if (!processedFilePathsMap || Object.keys(processedFilePathsMap).length === 0) {
-      ElMessage.error('服务器未返回有效的文件路径')
-    }
-
-    // 1. 将完整的 Map 存入 Pinia Store，供 handleCalculate 使用
-    uploadStore.setProcessedFilePaths(processedFilePathsMap)
-
-    // 2. 从 Map 的 values 中提取路径列表，用于在界面上显示
-    files.value = Object.values(processedFilePathsMap)
-
-    // 3. 默认全选所有上传成功的文件
-    selectedFiles.value = [...files.value]
-
-    progress.value = 100
-    progressStatusText.value = '上传完成'
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    ElMessage.success('文件上传成功')
-  } catch (error) {
-    let errorMessage
-    if (error.response) {
-      if (error.response.data && (error.response.data.error || error.response.data.message)) {
-        errorMessage = error.response.data.error || error.response.data.message
-      } else {
-        errorMessage = `服务器错误 (${error.response.status})`
-      }
-    } else if (error.request) {
-      errorMessage = '网络请求超时或无响应，请检查网络连接'
-    } else {
-      errorMessage = '上传失败，网络连接问题或未知错误'
-    }
-    ElMessage.error(errorMessage)
-    progress.value = 0
-  } finally {
-    clearInterval(timer)
-    isUploading.value = false
-    // Do not reset form here to allow re-submission or modification
-  }
+  // 5. 调用 Store 的 Action 来处理上传。
+  //    因为弹窗已经关闭，我们不再需要用 await 来等待它的返回结果去控制弹窗。
+  //    组件的任务（收集数据、关闭弹窗）已经完成，剩下的交给 Store 在后台处理。
+  uploadStore.uploadAndUnzipFiles(formDataPayload)
 }
 
 const handleCalculate = async () => {
-  // 1. 检查用户是否在UI上选择了文件
   if (!selectedFiles.value.length) {
     ElMessage.warning('请至少选择一个文件进行计算')
     return
   }
-
-  // 2. 检查Pinia中是否存在从/unzip接口获取的文件路径Map
-  const filePathsMap = uploadStore.processedFilePaths
-  if (!filePathsMap) {
-    ElMessage.error('无法找到文件映射关系，请重新上传数据。')
-    return
-  }
-
-  isCalculating.value = true
-  progress.value = 0
-  progressStatusText.value = '计算中 0%'
-
-  const timer = setInterval(() => {
-    if (progress.value < 90) {
-      progress.value = Math.min(progress.value + progressSpeed.value, 99)
-    }
-  }, 500)
-
-  try {
-    const reportType = uploadStore.reportType
-
-    // 3. 异步获取计算指标（如果没有定义 getCalculationSettings 函数，此处会报错）
-    const settings = await getCalculationSettings(reportType)
-
-    // 4. 构建发送到后端的请求体 (payload)
-    const payload = {
-      report_type: reportType
-    }
-
-    switch (reportType) {
-      case 'MAINTENANCE':
-      case 'CONSTRUCTION':
-        payload.maintain = {
-          project_name: uploadStore.projectName,
-          before_root_dir: filePathsMap.firstInspectionExcel,
-          maintain_xlsx_file: filePathsMap.secondInspectionExcel,
-          after_root_dir: filePathsMap.diseaseDataExcel
-        }
-        break
-
-      case 'EXPRESSWAY':
-        payload.express_way = {
-          root_path: filePathsMap.threeDimensionalDataZip,
-          maintenance_unit_file: filePathsMap.managementDetailFile,
-          unit_level_file: filePathsMap.unitLevelDetailFile,
-          pingding_file: filePathsMap.cicsDataFile,
-          level_file: filePathsMap.roadConditionFile,
-          danwei: uploadStore.managementUnit,
-          pqi_valuewd1: settings.pqiTarget ?? 90,
-          pqi_valuewd2: settings.networkPQI ?? 90,
-          threshold: settings.excellentRate ?? 88,
-          PQI_threshold: settings.unitPQI ?? 80,
-          PCI_threshold: settings.unitPCI ?? 80,
-          RQI_threshold: settings.unitRQI ?? 80,
-          RDI_threshold: settings.unitRDI ?? 75,
-          SRI_threshold: settings.unitSRI ?? 75
-        }
-        break
-
-      case 'RURAL':
-        payload.rural = {
-          nc_base_dir: filePathsMap.threeDimensionalDataZip,
-          unit_xlsx: filePathsMap.unitLevelDetailFile,
-          root_dir: filePathsMap.threeDimensionalDataZip,
-          xlsx_file: filePathsMap.managementDetailFile,
-          gy_value: uploadStore.managementUnit,
-          pqi_wd1: settings.pqiTarget ?? 85,
-          pqi_12: settings.networkPQI1 ?? 85,
-          pqi_34: settings.networkPQI2 ?? 80
-        }
-        break
-
-      case 'NATIONAL_PROVINCIAL':
-        payload.national_province = {
-          root_path: filePathsMap.threeDimensionalDataZip,
-          xlsx_file: filePathsMap.managementDetailFile,
-          CICScardata: filePathsMap.cicsDataFile,
-          unit_path: filePathsMap.unitLevelDetailFile,
-          file_path: filePathsMap.roadConditionFile,
-          bitumen_folder_path: filePathsMap.previousYearDiseaseZip,
-          gy_value: uploadStore.managementUnit,
-          pqi_value: settings.pqiTarget ?? 90.5,
-          wdpqi_12: settings.networkPQI1 ?? 85,
-          wdpqi_34: settings.networkPQI2 ?? 80,
-          pqi_12: settings.unitPQI1 ?? 75,
-          pci_12: settings.unitPCI1 ?? 75,
-          rqi_12: settings.unitRQI1 ?? 75,
-          rdi_12: settings.unitRDI1 ?? 70,
-          pqi_34: settings.unitPQI2 ?? 70,
-          pci_34: settings.unitPCI2 ?? 70,
-          rqi_34: settings.unitRQI2 ?? 70,
-          rate_12: settings.networkExcellentRate1 ?? 80,
-          rate_34: settings.networkExcellentRate2 ?? 75
-        }
-        break
-
-      default:
-        // 如果没有匹配的类型，抛出错误
-        ElMessage.error(`未知的报告类型: ${reportType}`)
-    }
-
-    // 5. 发送请求
-    const mdResponse = await service.post('/api/calculate/md', payload)
-
-    if (mdResponse?.data?.filename) {
-      const mdFilename = mdResponse.data.filename
-      let storedFilenames = JSON.parse(localStorage.getItem('reportFilenames') || '[]')
-      storedFilenames.push(mdFilename)
-      localStorage.setItem('reportFilenames', JSON.stringify(storedFilenames))
-
-      progress.value = 100
-      progressStatusText.value = '计算完成'
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      ElMessage.success('报告已生成')
-      resetUploadForm()
-      resetFileList() // 确保 resetFileList 函数存在，用于清空 files 和 selectedFiles
-      uploadStore.reset()
-    } else {
-      ElMessage.error('报告生成失败，服务器未返回有效文件名。')
-      progress.value = 0
-    }
-  } catch (error) {
-    let errorMessage
-    if (error.response) {
-      errorMessage =
-        error.response.data?.message ||
-        error.response.data?.error ||
-        `计算服务错误 (${error.response.status})`
-    } else if (error.request) {
-      errorMessage = '计算请求超时或无响应，请检查网络连接'
-    } else if (error.message) {
-      errorMessage = error.message
-    } else {
-      errorMessage = '计算失败，网络连接问题或未知错误'
-    }
-    ElMessage.error(errorMessage)
-    progress.value = 0
-  } finally {
-    clearInterval(timer)
-    isCalculating.value = false
-    emit('refresh-report-list')
-  }
+  // 直接调用 store 的 action，将所有复杂逻辑交给 store
+  await uploadStore.startCalculation()
 }
 
 const getFileName = (path) => {

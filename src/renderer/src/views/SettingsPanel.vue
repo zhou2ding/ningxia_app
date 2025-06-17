@@ -788,64 +788,23 @@ export default {
         roadType: roadType
       }
     },
-    mapApiDataToCalculationData(apiData, roadType) {
-      let updatedFields = {}
-      if (!apiData) return
-
-      if (roadType === 'expressway') {
-        updatedFields.expressway_pqiTarget = apiData.pqiTarget
-        updatedFields.expressway_networkPQI = apiData.networkPQI
-        updatedFields.expressway_excellentRate = apiData.excellentRate
-        updatedFields.expressway_unitPQI = apiData.unitPQI
-        updatedFields.expressway_unitPCI = apiData.unitPCI
-        updatedFields.expressway_unitRQI = apiData.unitRQI
-        updatedFields.expressway_unitRDI = apiData.unitRDI
-        updatedFields.expressway_unitSRI = apiData.unitSRI
-      } else if (roadType === 'nationalProvincial') {
-        updatedFields.nationalProvincial_pqiTarget = apiData.pqiTarget
-        updatedFields.nationalProvincial_networkPQI1 = apiData.networkPQI1
-        updatedFields.nationalProvincial_networkExcellentRate1 =
-          apiData.nationalProvincialNetworkExcellentRate1
-        updatedFields.nationalProvincial_networkPQI2 = apiData.networkPQI2
-        updatedFields.nationalProvincial_networkExcellentRate2 =
-          apiData.nationalProvincialNetworkExcellentRate2
-        updatedFields.nationalProvincial_unitPQI1 = apiData.unitPQI1
-        updatedFields.nationalProvincial_unitPCI1 = apiData.unitPCI1
-        updatedFields.nationalProvincial_unitRQI1 = apiData.unitRQI1
-        updatedFields.nationalProvincial_unitRDI1 = apiData.unitRDI1
-        updatedFields.nationalProvincial_unitSRI1 = apiData.unitSRI1
-        updatedFields.nationalProvincial_unitPQI2 = apiData.unitPQI2
-        updatedFields.nationalProvincial_unitPCI2 = apiData.unitPCI2
-        updatedFields.nationalProvincial_unitRQI2 = apiData.unitRQI2
-      } else if (roadType === 'rural') {
-        updatedFields.rural_pqiTarget = apiData.pqiTarget
-        updatedFields.rural_networkPQI1 = apiData.networkPQI1
-        updatedFields.rural_networkPQI2 = apiData.networkPQI2
-        updatedFields.rural_unitPQI1 = apiData.unitPQI1
-        updatedFields.rural_unitPCI1 = apiData.unitPCI1
-        updatedFields.rural_unitRQI1 = apiData.unitRQI1
-        updatedFields.rural_unitRDI1 = apiData.unitRDI1
-        updatedFields.rural_unitSRI1 = apiData.unitSRI1
-        updatedFields.rural_unitPQI2 = apiData.unitPQI2
-        updatedFields.rural_unitPCI2 = apiData.unitPCI2
-        updatedFields.rural_unitRQI2 = apiData.unitRQI2
-      }
-      this.calculationData = { ...this.calculationData, ...updatedFields, roadType: roadType }
-    },
     async loadCalculationSettings() {
       const currentRoadType = this.calculationData.roadType
       try {
         const response = await this.$axios.get(`/api/settings/calculation/${currentRoadType}`)
         if (response.data) {
-          this.mapApiDataToCalculationData(response.data, currentRoadType)
+          this.calculationData = { ...this.calculationData, ...response.data }
         } else {
+          // 如果API没有返回数据，加载默认值
           this.loadRoadTypeDefaults(currentRoadType)
         }
       } catch (error) {
         if (error.response?.status === 404) {
+          // 404表示没有找到该类型的配置，加载默认值
           this.loadRoadTypeDefaults(currentRoadType)
         } else {
           this.$message.error('加载计算指标配置失败')
+          // 也可以在这里加载默认值，以防界面空白
           this.loadRoadTypeDefaults(currentRoadType)
         }
       }
