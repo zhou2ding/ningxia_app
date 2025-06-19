@@ -221,7 +221,7 @@ export const useUploadStore = defineStore('upload', {
       try {
         const settings = await getCalculationSettings(this.reportType)
         const payload = { report_type: this.reportType }
-
+        const cleanedManagementUnit = this.managementUnit.replace(/_city$/, '')
         switch (this.reportType) {
           case 'MAINTENANCE':
           case 'CONSTRUCTION':
@@ -258,7 +258,7 @@ export const useUploadStore = defineStore('upload', {
               unit_xlsx: this.processedFilePaths.unitLevelDetailFile,
               root_dir: this.processedFilePaths.threeDimensionalDataZip,
               xlsx_file: this.processedFilePaths.managementDetailFile,
-              gy_value: this.managementUnit,
+              gy_value: cleanedManagementUnit,
               pqi_wd1: settings.pqiTarget ?? 85,
               pqi_12: settings.networkPQI1 ?? 85,
               pqi_34: settings.networkPQI2 ?? 80
@@ -273,7 +273,7 @@ export const useUploadStore = defineStore('upload', {
               unit_path: this.processedFilePaths.unitLevelDetailFile,
               file_path: this.processedFilePaths.roadConditionFile,
               bitumen_folder_path: this.processedFilePaths.previousYearDiseaseZip,
-              gy_value: this.managementUnit,
+              gy_value: cleanedManagementUnit,
               pqi_value: settings.pqiTarget ?? 90.5,
               wdpqi_12: settings.networkPQI1 ?? 85,
               wdpqi_34: settings.networkPQI2 ?? 80,
